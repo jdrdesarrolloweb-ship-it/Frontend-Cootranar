@@ -129,18 +129,29 @@ export default function FormularioVehiculoMultiPaso({ onVehiculoCreado, onCancel
 
   // Cargar datos del vehículo cuando se está en modo edición
   useEffect(() => {
-    if (!vehiculoId) return;
+    if (!vehiculoId) {
+      setCargandoDatos(false);
+      return;
+    }
+    let isMounted = true;
     const cargarDatosVehiculo = async () => {
       setCargandoDatos(true);
       try {
-        const [resVeh, resDocs, resPols, resConds] = await Promise.all([
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Tiempo de espera agotado al obtener la información del vehículo.')), 12000)
+        );
+
+        const fetchPromise = Promise.all([
           vehiculosApi.obtenerPorId(vehiculoId),
           vehiculosApi.obtenerDocumentos(vehiculoId).catch(() => ({ data: { data: { documentos: [] } } })),
           vehiculosApi.obtenerPolizas(vehiculoId).catch(() => ({ data: { data: { polizas: [] } } })),
           vehiculosApi.obtenerConductores(vehiculoId).catch(() => ({ data: { data: { conductores: [] } } })),
         ]);
 
-        const v = resVeh.data.data?.vehiculo || resVeh.data.data;
+        const [resVeh, resDocs, resPols, resConds] = await Promise.race([fetchPromise, timeoutPromise]) as any;
+        if (!isMounted) return;
+
+        const v = resVeh.data?.data?.vehiculo || resVeh.data?.data;
         if (!v) throw new Error('No se pudo cargar el vehículo');
 
         // Paso 2: Datos del vehículo
@@ -179,7 +190,7 @@ export default function FormularioVehiculoMultiPaso({ onVehiculoCreado, onCancel
         }
 
         // Paso 4: Documentos
-        const docsRaw = resDocs.data.data?.documentos || [];
+        const docsRaw = resDocs.data?.data?.documentos || resDocs.data?.documentos || [];
         const nuevosDocs: any = {
           SOAT: { numerodocumento: '', fechavencimiento: '', archivo: null },
           TECNICOMECANICA: { numerodocumento: '', fechavencimiento: '', archivo: null },
@@ -201,7 +212,7 @@ export default function FormularioVehiculoMultiPaso({ onVehiculoCreado, onCancel
         setIdsDocumentos(nuevosIdsDoc);
 
         // Paso 5: Pólizas
-        const polsRaw = resPols.data.data?.polizas || [];
+        const polsRaw = resPols.data?.data?.polizas || resPols.data?.polizas || [];
         const nuevasPols: any = {
           CONTRACTUAL: { idaseguradora: '', codigopoliza: '', fechavencimiento: '', archivo: null },
           EXTRACONTRACTUAL: { idaseguradora: '', codigopoliza: '', fechavencimiento: '', archivo: null },
@@ -223,7 +234,7 @@ export default function FormularioVehiculoMultiPaso({ onVehiculoCreado, onCancel
         setIdsPolizas(nuevosIdsPoliza);
 
         // Paso 6: Conductores (separar principales y reemplazo)
-        const condsRaw = resConds.data.data?.conductores || [];
+        const condsRaw = resConds.data?.data?.conductores || resConds.data?.conductores || [];
         const principales = condsRaw.filter((c: any) => !c.esremplazo).map((c: any) => ({ ...c, esNuevo: false }));
         const reemplazos = condsRaw.filter((c: any) => c.esremplazo).map((c: any) => ({ ...c, esNuevo: false }));
         setConductores(principales);
@@ -239,13 +250,18 @@ export default function FormularioVehiculoMultiPaso({ onVehiculoCreado, onCancel
         setConductoresOriginalesIds(idsOriginales);
 
       } catch (err: any) {
+        if (!isMounted) return;
+        console.error('Error al cargar datos del vehículo:', err);
         alert('Error al cargar datos del vehículo: ' + (err.message || 'Error desconocido'));
         onCancelar();
       } finally {
-        setCargandoDatos(false);
+        if (isMounted) {
+          setCargandoDatos(false);
+        }
       }
     };
     cargarDatosVehiculo();
+    return () => { isMounted = false; };
   }, [vehiculoId]);
 
   const cargarCatalogos = async () => {

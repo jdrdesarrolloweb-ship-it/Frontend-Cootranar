@@ -2,17 +2,35 @@ import axios from 'axios';
 import { descifrarDataRecursivo } from '../../shared/utils/cryptoRsa';
 import { isTokenExpired, clearAuthStorage } from '../../shared/utils/authUtils';
 
-export const getApiBaseUrl = (): string => {
-  if (typeof window !== 'undefined' && window.location.hostname.includes('vercel.app')) {
-    return '/api';
+declare module 'axios' {
+  interface AxiosRequestConfig {
+    _retriedRemote?: boolean;
   }
-  return import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+}
+
+const isLocalHost = typeof window !== 'undefined' && (
+  window.location.hostname === 'localhost' ||
+  window.location.hostname === '127.0.0.1' ||
+  window.location.hostname === '0.0.0.0'
+);
+
+const LOCAL_API_URL = 'http://localhost:3000/api';
+const REMOTE_API_URL = (typeof window !== 'undefined' && window.location.hostname.includes('vercel.app'))
+  ? '/api'
+  : (import.meta.env.VITE_API_URL || 'https://cootranar-api-ecosystem.onrender.com/api');
+
+export const getApiBaseUrl = (): string => {
+  if (isLocalHost) {
+    return LOCAL_API_URL;
+  }
+  return REMOTE_API_URL;
 };
 
 export const API_BASE_URL = getApiBaseUrl();
 
 export const httpClient = axios.create({
   baseURL: API_BASE_URL,
+  timeout: 15000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -57,6 +75,13 @@ httpClient.interceptors.response.use(
   async (error) => {
     if (axios.isCancel(error)) {
       return Promise.reject(error);
+    }
+
+    // Si estamos en localhost y el gateway local (:3000) no responde, reintentar automáticamente en Render
+    if (isLocalHost && !error.response && error.config && !error.config._retriedRemote && REMOTE_API_URL !== LOCAL_API_URL) {
+      error.config._retriedRemote = true;
+      error.config.baseURL = REMOTE_API_URL;
+      return httpClient.request(error.config);
     }
 
     const status = error.response?.status;

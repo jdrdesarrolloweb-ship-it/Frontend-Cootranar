@@ -227,7 +227,10 @@ export const VehiculosPage = () => {
                   />
                 </div>
                 <button
-                  onClick={() => setMostrarFormularioMultiPaso(true)}
+                  onClick={() => {
+                    setVehiculoIdEdicion(null);
+                    setMostrarFormularioMultiPaso(true);
+                  }}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
