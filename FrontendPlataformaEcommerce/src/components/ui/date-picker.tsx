@@ -70,11 +70,32 @@ export const DatePicker = React.forwardRef<HTMLDivElement, DatePickerProps>(
     ref,
   ) => {
     const [open, setOpen] = React.useState(false);
+    const [desplegarHaciaArriba, setDesplegarHaciaArriba] = React.useState(desplegarArriba);
     const containerRef = React.useRef<HTMLDivElement>(null);
 
     const selectedDate = React.useMemo(() => parseISODate(value), [value]);
     const minDate = React.useMemo(() => parseISODate(min), [min]);
     const maxDate = React.useMemo(() => parseISODate(max), [max]);
+
+    React.useEffect(() => {
+      if (open && containerRef.current) {
+        if (desplegarArriba) {
+          setDesplegarHaciaArriba(true);
+          return;
+        }
+        const rect = containerRef.current.getBoundingClientRect();
+        const espacioAbajo = window.innerHeight - rect.bottom;
+        const espacioArriba = rect.top;
+        const ALTURA_CALENDARIO = 350;
+
+        // Si no cabe abajo (menos de 350px) y arriba hay más espacio, abrir hacia arriba
+        if (espacioAbajo < ALTURA_CALENDARIO && espacioArriba > espacioAbajo) {
+          setDesplegarHaciaArriba(true);
+        } else {
+          setDesplegarHaciaArriba(false);
+        }
+      }
+    }, [open, desplegarArriba]);
 
     React.useEffect(() => {
       function handleClickOutside(event: MouseEvent) {
@@ -195,14 +216,14 @@ export const DatePicker = React.forwardRef<HTMLDivElement, DatePickerProps>(
               ref={ref}
               role="dialog"
               aria-modal="true"
-              initial={{ opacity: 0, scale: 0.96, y: desplegarArriba ? 4 : -4 }}
+              initial={{ opacity: 0, scale: 0.96, y: desplegarHaciaArriba ? 4 : -4 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.96, y: desplegarArriba ? 4 : -4 }}
+              exit={{ opacity: 0, scale: 0.96, y: desplegarHaciaArriba ? 4 : -4 }}
               transition={{ duration: 0.14, ease: [0.23, 1, 0.32, 1] }}
               style={{ zIndex: 9999 }}
               className={cn(
                 "absolute",
-                desplegarArriba ? "bottom-full mb-2" : "top-full mt-2",
+                desplegarHaciaArriba ? "bottom-full mb-2" : "top-full mt-2",
                 align === "right" ? "right-0" : align === "center" ? "left-1/2 -translate-x-1/2" : "left-0",
               )}
             >
