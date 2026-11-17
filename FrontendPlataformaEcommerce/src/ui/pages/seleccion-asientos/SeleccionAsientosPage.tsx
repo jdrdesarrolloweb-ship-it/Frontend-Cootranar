@@ -271,10 +271,24 @@ export function SeleccionAsientosPage() {
           idPuntoDestino = idPuntoDestino || detalleData.idPuntoDestino || null;
         }
 
+        let asientosFinales = asientosData.asientos;
+        let tiempoMaxFinal = asientosData.tiempoMaxReservaMin;
+
+        const puntosEnviadosAlInicio = Boolean(state.idPuntoOrigen && state.idPuntoDestino);
+        const puntosResueltosEnAsientos = Boolean(asientosData?.idPuntoOrigen && asientosData?.idPuntoDestino);
+        if (!puntosEnviadosAlInicio && !puntosResueltosEnAsientos && idPuntoOrigen && idPuntoDestino) {
+          const asientosRealesRes = await httpClient.get<{ data: AsientosResponse }>(
+            `/plataforma-ecommerce/viaje/${state.idviaje}/asientos`,
+            { params: { idPuntoOrigen, idPuntoDestino } }
+          );
+          asientosFinales = asientosRealesRes.data.data.asientos;
+          tiempoMaxFinal = asientosRealesRes.data.data.tiempoMaxReservaMin;
+        }
+
         setPuntosResueltos({ idPuntoOrigen, idPuntoDestino });
         setDetalle(detalleData);
-        setAsientos(asientosData.asientos);
-        setTiempoMaxMin(asientosData.tiempoMaxReservaMin);
+        setAsientos(asientosFinales);
+        setTiempoMaxMin(tiempoMaxFinal);
       } catch {
         setError('No se pudo cargar la información del viaje. Intenta de nuevo.');
       } finally {
