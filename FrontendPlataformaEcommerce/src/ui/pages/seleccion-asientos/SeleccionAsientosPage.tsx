@@ -52,6 +52,8 @@ interface DetalleViaje {
   codigoviaje: string;
   fechasalida: string;
   horasalida: string;
+  idPuntoOrigen?: number | null;
+  idPuntoDestino?: number | null;
   ruta: { idruta: number; nombre: string; via: string; origen: string; destino: string };
   vehiculo: { idvehiculo: number; numeromovil: string; placa: string; capacidad: number; cantidadpisos: number; distribucionasientos: { columnas: number; distribucion: any[] } };
   tipoBus: { idtipobus: number; nombre: string; descripcion: string };
@@ -236,8 +238,6 @@ export function SeleccionAsientosPage() {
           } catch { /* si falla, continuar sin puntos */ }
         }
 
-        setPuntosResueltos({ idPuntoOrigen, idPuntoDestino });
-
         const [detalleRes, asientosRes] = await Promise.all([
           httpClient.get<{ data: DetalleViaje }>(`/plataforma-ecommerce/viaje/${state.idviaje}/detalle`),
           httpClient.get<{ data: AsientosResponse }>(
@@ -246,7 +246,16 @@ export function SeleccionAsientosPage() {
           )
         ]);
 
-        setDetalle(detalleRes.data.data);
+        const detalleData = detalleRes.data.data;
+        if (!idPuntoOrigen && detalleData.idPuntoOrigen) {
+          idPuntoOrigen = detalleData.idPuntoOrigen;
+        }
+        if (!idPuntoDestino && detalleData.idPuntoDestino) {
+          idPuntoDestino = detalleData.idPuntoDestino;
+        }
+
+        setPuntosResueltos({ idPuntoOrigen, idPuntoDestino });
+        setDetalle(detalleData);
         setAsientos(asientosRes.data.data.asientos);
         setTiempoMaxMin(asientosRes.data.data.tiempoMaxReservaMin);
       } catch {
@@ -603,6 +612,40 @@ export function SeleccionAsientosPage() {
   const handleCloseSugerencias = () => setSugerenciaActiva(null);
 
 
+  const resolverPuntosOError = async (): Promise<{ idPuntoOrigen: number; idPuntoDestino: number } | null> => {
+    let oId = puntosResueltos.idPuntoOrigen;
+    let dId = puntosResueltos.idPuntoDestino;
+
+    if (oId && dId) {
+      return { idPuntoOrigen: oId, idPuntoDestino: dId };
+    }
+
+    if (detalle?.idPuntoOrigen && detalle?.idPuntoDestino) {
+      oId = detalle.idPuntoOrigen;
+      dId = detalle.idPuntoDestino;
+      setPuntosResueltos({ idPuntoOrigen: oId, idPuntoDestino: dId });
+      return { idPuntoOrigen: oId, idPuntoDestino: dId };
+    }
+
+    if (state?.idviaje) {
+      try {
+        const res = await httpClient.get<{ data: { idpuntoorigen: number; idpuntodestino: number } }>(
+          `/plataforma-ecommerce/viaje/${state.idviaje}/resolver-tramo`,
+          { params: { origen: state?.origen || detalle?.ruta.origen, destino: state?.destino || detalle?.ruta.destino } }
+        );
+        if (res.data?.data?.idpuntoorigen && res.data?.data?.idpuntodestino) {
+          oId = res.data.data.idpuntoorigen;
+          dId = res.data.data.idpuntodestino;
+          setPuntosResueltos({ idPuntoOrigen: oId, idPuntoDestino: dId });
+          return { idPuntoOrigen: oId, idPuntoDestino: dId };
+        }
+      } catch { /* continuar al error */ }
+    }
+
+    setErrorMsg('No se pudieron resolver los puntos de origen y destino del viaje. Por favor intenta recargar la página.');
+    return null;
+  };
+
   // --- Confirmar y pagar ---
   const handleConfirmarYPagar = async () => {
     setErrorMsg(null);
@@ -616,7 +659,8 @@ export function SeleccionAsientosPage() {
     setErroresPasajeros(nuevosErrores);
     if (hayErrores) return;
 
-    if (!puntosResueltos.idPuntoOrigen || !puntosResueltos.idPuntoDestino) return;
+    const puntos = await resolverPuntosOError();
+    if (!puntos) return;
 
     // Bug 1 fix: si el usuario marcó "Yo soy este pasajero" completar el perfil
     // directamente con esos datos ANTES de iniciar el pago, para evitar que
@@ -655,8 +699,8 @@ export function SeleccionAsientosPage() {
     // Construir payload para Wompi
     const asientosDTO: AsientoTransaccionDTO[] = asientosSeleccionados.map((asiento, idx) => ({
       idAsientoViaje: asiento.idasientoviaje,
-      idPuntoOrigen: puntosResueltos.idPuntoOrigen!,
-      idPuntoDestino: puntosResueltos.idPuntoDestino!,
+      idPuntoOrigen: puntos.idPuntoOrigen,
+      idPuntoDestino: puntos.idPuntoDestino,
       monto: asiento.precio,
       esComprador: idx === 0,
       nombrePasajero: pasajeros[idx].nombrePasajero,
@@ -728,7 +772,8 @@ export function SeleccionAsientosPage() {
     setErroresPasajeros(nuevosErrores);
     if (hayErrores) return;
 
-    if (!puntosResueltos.idPuntoOrigen || !puntosResueltos.idPuntoDestino) return;
+    const puntos = await resolverPuntosOError();
+    if (!puntos) return;
 
     if (!estaAutenticado) {
       setLoginGeneralAbierto(true);
@@ -744,8 +789,8 @@ export function SeleccionAsientosPage() {
     try {
       const asientosDTO: AsientoCompraMillasDTO[] = asientosSeleccionados.map((asiento, idx) => ({
         idAsientoViaje: asiento.idasientoviaje,
-        idPuntoOrigen: puntosResueltos.idPuntoOrigen!,
-        idPuntoDestino: puntosResueltos.idPuntoDestino!,
+        idPuntoOrigen: puntos.idPuntoOrigen,
+        idPuntoDestino: puntos.idPuntoDestino,
         monto: asiento.precio,
         esComprador: idx === 0,
         nombrePasajero: pasajeros[idx].nombrePasajero,
@@ -1315,11 +1360,17 @@ export function SeleccionAsientosPage() {
                   )}
                 </div>
 
-                {/* Error de pago */}
+                {/* Error de pago o validación general */}
                 {fase === 'error' && errorPago && (
                   <div className="mt-4 flex items-start gap-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 rounded-xl px-4 py-3 text-sm">
                     <span className="material-symbols-outlined text-base shrink-0 mt-0.5">error</span>
                     <span>{errorPago.mensaje}</span>
+                  </div>
+                )}
+                {errorMsg && (
+                  <div className="mt-4 flex items-start gap-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 rounded-xl px-4 py-3 text-sm">
+                    <span className="material-symbols-outlined text-base shrink-0 mt-0.5">error</span>
+                    <span>{errorMsg}</span>
                   </div>
                 )}
 

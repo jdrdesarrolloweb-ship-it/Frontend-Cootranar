@@ -9,6 +9,7 @@ import {
   type MapeoAsientos,
   type ViajeSemilla,
 } from '../../../infrastructure/services/vehiculosSemillaApi';
+import { DatePicker } from '@/components/ui/date-picker';
 
 const BLUE = '#0D3B8E';
 
@@ -271,8 +272,12 @@ export const BusesSemillaPage = () => {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '14px' }}>
           <div style={{ fontWeight: 700, fontSize: '15px', color: '#0f172a' }}>Viajes vendidos con bus semilla</div>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center', fontSize: '12px', color: '#64748b' }}>
-            <label>Desde <input type="date" value={desde} onChange={(e) => setDesde(e.target.value)} style={input} /></label>
-            <label>Hasta <input type="date" value={hasta} min={desde} onChange={(e) => setHasta(e.target.value)} style={input} /></label>
+            <div style={{ width: '135px' }}>
+              <DatePicker value={desde} onChange={setDesde} inputClassName="h-[34px] text-xs rounded-lg" placeholder="Desde" />
+            </div>
+            <div style={{ width: '135px' }}>
+              <DatePicker value={hasta} min={desde} onChange={setHasta} inputClassName="h-[34px] text-xs rounded-lg" placeholder="Hasta" />
+            </div>
           </div>
         </div>
 

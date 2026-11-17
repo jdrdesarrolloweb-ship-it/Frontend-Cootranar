@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { vehiculosApi, propietariosApi, tiposBusApi, tiposServicioApi, aseguradorasApi, archivosApi } from '../../../infrastructure/services/vehiculosApi';
 import { conductoresApi } from '../../../infrastructure/services/conductoresApi';
 import DisenadorAsientos from './DisenadorAsientos';
+import { DatePicker } from '@/components/ui/date-picker';
 
 const PASOS_BUS = ['Propietario', 'Vehículo', 'Asientos', 'Documentos', 'Pólizas', 'Conductores'];
 const PASOS_FURGON = ['Propietario', 'Vehículo', 'Documentos', 'Pólizas', 'Conductores'];
@@ -137,7 +138,7 @@ export default function ModalEditarVehiculo({ vehiculo, onCerrar, onActualizado 
         _modificado: false,
       })));
       setConductores(conds.data?.data?.conductores || []);
-    }).catch(() => {});
+    }).catch(() => { });
 
     setArchivosDoc({});
     setArchivosPoliza({});
@@ -199,8 +200,8 @@ export default function ModalEditarVehiculo({ vehiculo, onCerrar, onActualizado 
       // deben quedar en NULL en BD (constraint chk_vehiculo_campos_segun_tipo),
       // así que nunca se incluyen en el payload de actualización.
       const campos = esFurgon
-        ? ['placa','numeromovil','modelo','anio','color','chasis','motor']
-        : ['placa','numeromovil','idtiposervicio','idtipobus','modelo','cantidadpisos','anio','color','chasis','motor'];
+        ? ['placa', 'numeromovil', 'modelo', 'anio', 'color', 'chasis', 'motor']
+        : ['placa', 'numeromovil', 'idtiposervicio', 'idtipobus', 'modelo', 'cantidadpisos', 'anio', 'color', 'chasis', 'motor'];
       campos.forEach(k => {
         const v = (form as any)[k] === '' ? null : (form as any)[k];
         const orig = (vehiculo as any)[k] === undefined ? null : (vehiculo as any)[k];
@@ -261,7 +262,7 @@ export default function ModalEditarVehiculo({ vehiculo, onCerrar, onActualizado 
         if (c.esCrear) {
           const fd = new FormData();
           Object.entries(c).forEach(([k, v]) => {
-            if (!['esNuevo','esCrear'].includes(k) && v !== undefined && v !== null)
+            if (!['esNuevo', 'esCrear'].includes(k) && v !== undefined && v !== null)
               fd.append(k, v as any);
           });
           if (c._archivoLicencia) fd.append('licencia', c._archivoLicencia);
@@ -321,7 +322,7 @@ export default function ModalEditarVehiculo({ vehiculo, onCerrar, onActualizado 
   return (
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200">
-        
+
         {/* Modal Header */}
         <div className="px-6 py-4 bg-slate-50 border-b border-gray-150 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -351,11 +352,10 @@ export default function ModalEditarVehiculo({ vehiculo, onCerrar, onActualizado 
             <button
               key={paso}
               onClick={() => setPasoActual(idx)}
-              className={`flex items-center gap-1.5 py-1 px-2.5 rounded-lg text-xs font-bold transition-all shrink-0 whitespace-nowrap ${
-                pasoActual === idx
-                  ? 'bg-primary text-white shadow-sm'
-                  : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'
-              }`}
+              className={`flex items-center gap-1.5 py-1 px-2.5 rounded-lg text-xs font-bold transition-all shrink-0 whitespace-nowrap ${pasoActual === idx
+                ? 'bg-primary text-white shadow-sm'
+                : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'
+                }`}
             >
               <span className="w-4 h-4 rounded-full bg-black/10 text-[9px] flex items-center justify-center font-black">
                 {idx + 1}
@@ -442,7 +442,7 @@ export default function ModalEditarVehiculo({ vehiculo, onCerrar, onActualizado 
                         <span className="material-symbols-outlined text-sm font-black">warning</span>
                         <span>No se encontró propietario con ese documento. Regístrelo a continuación:</span>
                       </div>
-                      
+
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1">
@@ -537,39 +537,39 @@ export default function ModalEditarVehiculo({ vehiculo, onCerrar, onActualizado 
               </div>
 
               {!esFurgon && (
-              <div>
-                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1">
-                  Tipo de Servicio
-                </label>
-                <select
-                  value={form.idtiposervicio}
-                  onChange={(e) => setForm({ ...form, idtiposervicio: e.target.value })}
-                  className="w-full p-2.5 border border-gray-200 rounded-xl text-xs font-bold outline-none bg-white"
-                >
-                  <option value="">Seleccione...</option>
-                  {tiposServicio.map((t: any) => (
-                    <option key={t.idtiposervicio} value={t.idtiposervicio}>{t.nombre}</option>
-                  ))}
-                </select>
-              </div>
+                <div>
+                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1">
+                    Tipo de Servicio
+                  </label>
+                  <select
+                    value={form.idtiposervicio}
+                    onChange={(e) => setForm({ ...form, idtiposervicio: e.target.value })}
+                    className="w-full p-2.5 border border-gray-200 rounded-xl text-xs font-bold outline-none bg-white"
+                  >
+                    <option value="">Seleccione...</option>
+                    {tiposServicio.map((t: any) => (
+                      <option key={t.idtiposervicio} value={t.idtiposervicio}>{t.nombre}</option>
+                    ))}
+                  </select>
+                </div>
               )}
 
               {!esFurgon && (
-              <div>
-                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1">
-                  Tipo de Bus
-                </label>
-                <select
-                  value={form.idtipobus}
-                  onChange={(e) => setForm({ ...form, idtipobus: e.target.value })}
-                  className="w-full p-2.5 border border-gray-200 rounded-xl text-xs font-bold outline-none bg-white"
-                >
-                  <option value="">Seleccione...</option>
-                  {tiposBus.map((t: any) => (
-                    <option key={t.idtipobus} value={t.idtipobus}>{t.nombre}</option>
-                  ))}
-                </select>
-              </div>
+                <div>
+                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1">
+                    Tipo de Bus
+                  </label>
+                  <select
+                    value={form.idtipobus}
+                    onChange={(e) => setForm({ ...form, idtipobus: e.target.value })}
+                    className="w-full p-2.5 border border-gray-200 rounded-xl text-xs font-bold outline-none bg-white"
+                  >
+                    <option value="">Seleccione...</option>
+                    {tiposBus.map((t: any) => (
+                      <option key={t.idtipobus} value={t.idtipobus}>{t.nombre}</option>
+                    ))}
+                  </select>
+                </div>
               )}
 
               <div>
@@ -625,19 +625,19 @@ export default function ModalEditarVehiculo({ vehiculo, onCerrar, onActualizado 
               </div>
 
               {!esFurgon && (
-              <div>
-                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1">
-                  Número de Pisos
-                </label>
-                <select
-                  value={form.cantidadpisos}
-                  onChange={(e) => setForm({ ...form, cantidadpisos: e.target.value })}
-                  className="w-full p-2.5 border border-gray-200 rounded-xl text-xs font-bold outline-none bg-white"
-                >
-                  <option value={1}>1 Piso</option>
-                  <option value={2}>2 Pisos</option>
-                </select>
-              </div>
+                <div>
+                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1">
+                    Número de Pisos
+                  </label>
+                  <select
+                    value={form.cantidadpisos}
+                    onChange={(e) => setForm({ ...form, cantidadpisos: e.target.value })}
+                    className="w-full p-2.5 border border-gray-200 rounded-xl text-xs font-bold outline-none bg-white"
+                  >
+                    <option value={1}>1 Piso</option>
+                    <option value={2}>2 Pisos</option>
+                  </select>
+                </div>
               )}
             </div>
           )}
@@ -708,14 +708,12 @@ export default function ModalEditarVehiculo({ vehiculo, onCerrar, onActualizado 
                       <label className="block text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1">
                         Fecha de Vencimiento
                       </label>
-                      <input
-                        type="date"
+                      <DatePicker
                         value={doc.fechavencimiento || ''}
-                        onChange={(e) => {
-                          const val = e.target.value;
+                        onChange={(val) => {
                           setDocumentos(prev => prev.map((d, i) => i === idx ? { ...d, fechavencimiento: val, _modificado: true } : d));
                         }}
-                        className="w-full p-2.5 border border-gray-200 rounded-xl text-xs font-bold outline-none"
+                        inputClassName="h-[38px] text-xs font-bold rounded-xl"
                       />
                     </div>
                   </div>
@@ -803,14 +801,12 @@ export default function ModalEditarVehiculo({ vehiculo, onCerrar, onActualizado 
                       <label className="block text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1">
                         Fecha de Vencimiento
                       </label>
-                      <input
-                        type="date"
+                      <DatePicker
                         value={pol.fechavencimiento || ''}
-                        onChange={(e) => {
-                          const val = e.target.value;
+                        onChange={(val) => {
                           setPolizas(prev => prev.map((p, i) => i === idx ? { ...p, fechavencimiento: val, _modificado: true } : p));
                         }}
-                        className="w-full p-2.5 border border-gray-200 rounded-xl text-xs font-bold outline-none"
+                        inputClassName="h-[38px] text-xs font-bold rounded-xl"
                       />
                     </div>
                   </div>
@@ -841,7 +837,7 @@ export default function ModalEditarVehiculo({ vehiculo, onCerrar, onActualizado 
             <div className="space-y-6">
               <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl">
                 <h4 className="text-xs font-black text-gray-700 mb-3">Conductores Actualmente Asignados</h4>
-                
+
                 {conductores.length === 0 ? (
                   <p className="text-xs text-gray-400 font-semibold italic text-center py-4">No hay conductores asignados a esta unidad.</p>
                 ) : (
@@ -948,11 +944,10 @@ export default function ModalEditarVehiculo({ vehiculo, onCerrar, onActualizado 
                         <label className="block text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1">
                           Fecha Vencimiento Licencia
                         </label>
-                        <input
-                          type="date"
+                        <DatePicker
                           value={nuevoCond.fechavencimientolicencia}
-                          onChange={(e) => setNuevoCond({ ...nuevoCond, fechavencimientolicencia: e.target.value })}
-                          className="w-full p-2.5 border border-gray-200 rounded-xl text-xs font-bold outline-none bg-white"
+                          onChange={(val) => setNuevoCond({ ...nuevoCond, fechavencimientolicencia: val })}
+                          inputClassName="h-[38px] text-xs font-bold rounded-xl"
                         />
                       </div>
                       <div>

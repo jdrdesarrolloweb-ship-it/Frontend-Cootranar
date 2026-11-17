@@ -6,6 +6,7 @@ import { viajesApi } from '../../../infrastructure/services/viajesApi';
 import { ModalSeleccionarRuta } from '../../components/viajes/ModalSeleccionarRuta';
 import { ModalDetallesViaje } from '../../components/viajes/ModalDetallesViaje';
 import { vehiculosSemillaApi, type BusSemilla } from '../../../infrastructure/services/vehiculosSemillaApi';
+import { DatePicker } from '@/components/ui/date-picker';
 
 const BLUE = '#0D3B8E';
 
@@ -436,11 +437,10 @@ export const ViajesPage = () => {
                 <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: isDark ? '#cbd5e1' : '#64748b', marginBottom: '6px' }}>
                   Fecha de Salida <span style={{ color: '#dc2626' }}>*</span>
                 </label>
-                <input
-                  type="date"
+                <DatePicker
                   value={formData.fechasalida}
-                  onChange={(e) => setFormData(prev => ({ ...prev, fechasalida: e.target.value }))}
-                  style={inputStyle}
+                  onChange={(val) => setFormData(prev => ({ ...prev, fechasalida: val }))}
+                  inputClassName="h-[38px] text-xs rounded-lg"
                 />
               </div>
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { httpClient } from '../../../infrastructure/api/httpClient';
+import { DatePicker } from '@/components/ui/date-picker';
 
 // ── Paleta Material You (extraída del HTML de referencia) ────────────────────
 const C = {
@@ -365,19 +366,12 @@ export const BuscadorViajes: React.FC<BuscadorViajesProps> = ({
             <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: C.onSurfaceVariant, marginBottom: '8px', letterSpacing: '0.04em' }}>
               FECHA DE VIAJE
             </label>
-            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-              <span className="material-symbols-outlined" style={{ position: 'absolute', left: '14px', color: C.outline, fontSize: '20px', pointerEvents: 'none', zIndex: 1 }}>
-                calendar_today
-              </span>
-              <input
-                type="date"
-                value={fecha}
-                onChange={e => setFecha(e.target.value)}
-                style={{ ...inputBase, cursor: 'pointer' }}
-                onFocus={e => { e.currentTarget.style.borderColor = C.secondary; e.currentTarget.style.boxShadow = `0 0 0 3px ${C.secondaryFixed}`; }}
-                onBlur={e => { e.currentTarget.style.borderColor = C.outlineVariant; e.currentTarget.style.boxShadow = 'none'; }}
-              />
-            </div>
+            <DatePicker
+              value={fecha}
+              onChange={setFecha}
+              placeholder="dd/mm/aaaa"
+              inputClassName="h-[46px] rounded-xl text-sm border-slate-200"
+            />
           </div>
 
           {/* Botones */}

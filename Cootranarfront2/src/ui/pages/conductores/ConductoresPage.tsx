@@ -4,6 +4,7 @@ import { useConductores } from '../../hooks/useConductores';
 import type { Conductor, EstadoConductor } from '../../../domain/entities/Conductor';
 import { httpClient } from '../../../infrastructure/api/httpClient';
 import { formatFechaCalendario } from '../../../shared/utils/formatters';
+import { DatePicker } from '@/components/ui/date-picker';
 
 const BLUE = '#0D3B8E';
 const ITEMS_PER_PAGE = 5;
@@ -34,9 +35,9 @@ function Avatar({ nombre, apellido, index }: { nombre: string; apellido: string;
 /* ─── Status badge ────────────────────────────────────────── */
 function EstadoBadge({ estado }: { estado: string }) {
   const map: Record<string, { bg: string; color: string }> = {
-    ACTIVO:    { bg: '#dcfce7', color: '#15803d' },
-    INACTIVO:  { bg: '#f1f5f9', color: '#64748b' },
-    SUSPENDIDO:{ bg: '#fee2e2', color: '#dc2626' },
+    ACTIVO: { bg: '#dcfce7', color: '#15803d' },
+    INACTIVO: { bg: '#f1f5f9', color: '#64748b' },
+    SUSPENDIDO: { bg: '#fee2e2', color: '#dc2626' },
   };
   const { bg, color } = map[estado] ?? { bg: '#f1f5f9', color: '#64748b' };
   return (
@@ -113,24 +114,24 @@ export const ConductoresPage = () => {
   const { conductores, isLoading, create, update, remove, activate: _activate } = useConductores();
 
   /* ── form state ──────────────────────────────────────────── */
-  const [nombre, setNombre]                     = useState('');
-  const [apellido, setApellido]                 = useState('');
-  const [tipoDoc, setTipoDoc]                   = useState('CC');
-  const [documento, setDocumento]               = useState('');
-  const [email, setEmail]                       = useState('');
-  const [telefono, setTelefono]                 = useState('');
-  const [licencia, setLicencia]                 = useState('');
+  const [nombre, setNombre] = useState('');
+  const [apellido, setApellido] = useState('');
+  const [tipoDoc, setTipoDoc] = useState('CC');
+  const [documento, setDocumento] = useState('');
+  const [email, setEmail] = useState('');
+  const [telefono, setTelefono] = useState('');
+  const [licencia, setLicencia] = useState('');
   const [categoriaLicencia, setCategoriaLicencia] = useState('');
   const [vencimientoLicencia, setVencimientoLicencia] = useState('');
   const [fechaContratacion, setFechaContratacion] = useState('');
-  const [estado, setEstado]                     = useState<EstadoConductor>('ACTIVO');
-  const [archivoLicencia, setArchivoLicencia]   = useState<File | null>(null);
-  const [editingId, setEditingId]               = useState<string | null>(null);
+  const [estado, setEstado] = useState<EstadoConductor>('ACTIVO');
+  const [archivoLicencia, setArchivoLicencia] = useState<File | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [editingUsuarioId, setEditingUsuarioId] = useState<number | null>(null);
-  const [formMsg, setFormMsg]                   = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
+  const [formMsg, setFormMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
 
   /* ── table state ─────────────────────────────────────────── */
-  const [page, setPage]                 = useState(1);
+  const [page, setPage] = useState(1);
   const [filterEstado, setFilterEstado] = useState<string>('TODOS');
 
   /* ── derived list ────────────────────────────────────────── */
@@ -140,8 +141,8 @@ export const ConductoresPage = () => {
     return arr.filter((c) => c.estado === filterEstado);
   }, [conductores, filterEstado]);
 
-  const totalPages  = Math.max(1, Math.ceil(list.length / ITEMS_PER_PAGE));
-  const paginated   = list.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
+  const totalPages = Math.max(1, Math.ceil(list.length / ITEMS_PER_PAGE));
+  const paginated = list.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
 
   const visiblePages = (() => {
     if (totalPages <= 5) return Array.from({ length: totalPages }, (_, i) => i + 1);
@@ -204,7 +205,7 @@ export const ConductoresPage = () => {
     // El backend usa 'activo' (boolean), no 'estado' (string)
     const activo = estado === 'ACTIVO' ? 'true' : 'false';
     formData.append('activo', activo);
-    
+
     if (archivoLicencia) {
       formData.append('licencia', archivoLicencia);
     }
@@ -214,20 +215,20 @@ export const ConductoresPage = () => {
         { id: String(editingUsuarioId), data: formData },
         {
           onSuccess: () => { setFormMsg({ type: 'ok', text: 'Conductor actualizado.' }); resetForm(); setTimeout(() => setFormMsg(null), 3000); },
-          onError:   (error: any) => { 
+          onError: (error: any) => {
             const msg = error?.response?.data?.message || 'Error al actualizar conductor.';
-            setFormMsg({ type: 'err', text: msg }); 
-            setTimeout(() => setFormMsg(null), 3000); 
+            setFormMsg({ type: 'err', text: msg });
+            setTimeout(() => setFormMsg(null), 3000);
           },
         }
       );
     } else {
       create.mutate(formData as any, {
         onSuccess: () => { setFormMsg({ type: 'ok', text: 'Conductor guardado correctamente.' }); resetForm(); setTimeout(() => setFormMsg(null), 3000); },
-        onError:   (error: any) => { 
+        onError: (error: any) => {
           const msg = error?.response?.data?.message || 'Error al guardar conductor.';
-          setFormMsg({ type: 'err', text: msg }); 
-          setTimeout(() => setFormMsg(null), 3000); 
+          setFormMsg({ type: 'err', text: msg });
+          setTimeout(() => setFormMsg(null), 3000);
         },
       });
     }
@@ -249,7 +250,7 @@ export const ConductoresPage = () => {
     try {
       const response = await httpClient.get(`/archivos/url-firmada`, { params: { url: publicUrl } });
       const signedUrl = response.data?.data?.url;
-      
+
       if (signedUrl) {
         const opened = window.open(signedUrl, '_blank');
         if (!opened) {
@@ -265,8 +266,8 @@ export const ConductoresPage = () => {
   };
 
   /* ── focus / blur helpers ────────────────────────────────── */
-  const focusBorder  = (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) => (e.currentTarget.style.borderColor = '#93b4e0');
-  const blurBorder   = (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) => (e.currentTarget.style.borderColor = '#e2e8f0');
+  const focusBorder = (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) => (e.currentTarget.style.borderColor = '#93b4e0');
+  const blurBorder = (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) => (e.currentTarget.style.borderColor = '#e2e8f0');
 
   /* ── section divider ─────────────────────────────────────── */
   const SectionTitle = ({ children }: { children: React.ReactNode }) => (
@@ -398,10 +399,10 @@ export const ConductoresPage = () => {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginTop: '14px' }}>
                 <Field label="Categoría Licencia">
                   <select
-                    value={categoriaLicencia} 
+                    value={categoriaLicencia}
                     onChange={e => setCategoriaLicencia(e.target.value)}
                     style={{ ...inputStyle, appearance: 'none' }}
-                    onFocus={focusBorder} 
+                    onFocus={focusBorder}
                     onBlur={blurBorder}
                   >
                     <option value="">Seleccionar categoría</option>
@@ -411,10 +412,10 @@ export const ConductoresPage = () => {
                   </select>
                 </Field>
                 <Field label="Vencimiento Licencia">
-                  <input
-                    type="date" value={vencimientoLicencia} onChange={e => setVencimientoLicencia(e.target.value)}
-                    style={inputStyle}
-                    onFocus={focusBorder} onBlur={blurBorder}
+                  <DatePicker
+                    value={vencimientoLicencia}
+                    onChange={setVencimientoLicencia}
+                    inputClassName="h-[38px] text-xs rounded-lg"
                   />
                 </Field>
               </div>
@@ -449,10 +450,10 @@ export const ConductoresPage = () => {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginTop: '14px' }}>
                 <Field label="Fecha Contratación">
-                  <input
-                    type="date" value={fechaContratacion} onChange={e => setFechaContratacion(e.target.value)}
-                    style={inputStyle}
-                    onFocus={focusBorder} onBlur={blurBorder}
+                  <DatePicker
+                    value={fechaContratacion}
+                    onChange={setFechaContratacion}
+                    inputClassName="h-[38px] text-xs rounded-lg"
                   />
                 </Field>
                 <Field label="Estado">
@@ -572,13 +573,13 @@ export const ConductoresPage = () => {
               <thead>
                 <tr style={{ background: '#f8fafc' }}>
                   {[
-                    { label: 'ID',                 width: '70px'  },
-                    { label: 'Nombre Completo',    width: '200px' },
-                    { label: 'Documento',          width: '130px' },
+                    { label: 'ID', width: '70px' },
+                    { label: 'Nombre Completo', width: '200px' },
+                    { label: 'Documento', width: '130px' },
                     { label: 'Categoría Licencia', width: '130px' },
-                    { label: 'Fecha Vencimiento',  width: '140px' },
-                    { label: 'Estado',             width: '110px' },
-                    { label: 'Acciones',           width: '90px'  },
+                    { label: 'Fecha Vencimiento', width: '140px' },
+                    { label: 'Estado', width: '110px' },
+                    { label: 'Acciones', width: '90px' },
                   ].map(({ label, width }) => (
                     <th key={label} style={{
                       width, padding: '11px 16px',

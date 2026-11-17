@@ -1,5 +1,6 @@
 import React from 'react';
 import type { FiltrosReporte as Filtros } from '../../../application/dto/ReporteDTO';
+import { DatePicker } from '@/components/ui/date-picker';
 
 const BLUE = '#0D3B8E';
 
@@ -41,21 +42,19 @@ export const FiltrosReporte: React.FC<FiltrosReporteProps> = ({
       <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
         <div style={{ flex: '1 1 150px', minWidth: '140px' }}>
           <label style={labelStyle}>Desde</label>
-          <input
-            type="date"
+          <DatePicker
             value={filtros.fechaDesde || ''}
-            onChange={e => set({ fechaDesde: e.target.value })}
-            style={inputStyle}
+            onChange={val => set({ fechaDesde: val })}
+            inputClassName="h-[38px] text-xs rounded-lg"
           />
         </div>
 
         <div style={{ flex: '1 1 150px', minWidth: '140px' }}>
           <label style={labelStyle}>Hasta</label>
-          <input
-            type="date"
+          <DatePicker
             value={filtros.fechaHasta || ''}
-            onChange={e => set({ fechaHasta: e.target.value })}
-            style={inputStyle}
+            onChange={val => set({ fechaHasta: val })}
+            inputClassName="h-[38px] text-xs rounded-lg"
           />
         </div>
 

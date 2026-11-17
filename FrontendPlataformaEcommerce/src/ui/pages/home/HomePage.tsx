@@ -5,6 +5,7 @@ import { Navbar } from '../../components/layout/Navbar';
 import { ROUTES } from '../../../shared/constants';
 import { SeccionMillasHome } from '../../components/millas/SeccionMillasHome';
 import { CinematicFooter } from '@/components/ui/motion-footer';
+import { DatePicker } from '@/components/ui/date-picker';
 import { TarjetaViaje } from '../../components/common/TarjetaViaje';
 import { GridTarjetasViajeSkeleton } from '../../components/common/TarjetaViajeSkeleton';
 import { ComboboxCiudades, type OpcionCombobox } from '../../components/common/ComboboxCiudades';
@@ -229,8 +230,7 @@ export function HomePage() {
   }, [origenSeleccionado]);
 
 
-  const handleFechaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
+  const handleFechaChange = (val: string) => {
     setFecha(val);
     if (val && val < hoyISO()) {
       setFechaError(idioma === 'es' ? 'La fecha no puede ser anterior a hoy' : 'The date cannot be before today');
@@ -373,18 +373,15 @@ export function HomePage() {
               </div>
 
               {/* Fecha compacta */}
-              <label className="flex-1 min-w-0 h-[50px] rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3.5 py-1.5 flex flex-col justify-center focus-within:border-[#0e3a8c] dark:focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-[#0e3a8c]/15 transition-all cursor-pointer">
-                <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 leading-tight">
-                  {h.fechaSalida}
-                </span>
-                <input
-                  type="date"
+              <div className="flex-1 min-w-0">
+                <DatePicker
                   value={fecha}
                   min={hoyISO()}
                   onChange={handleFechaChange}
-                  className="w-full bg-transparent text-xs sm:text-[13px] font-extrabold text-slate-900 dark:text-slate-100 border-none p-0 outline-none focus:ring-0 cursor-pointer"
+                  placeholder={h.fechaSalida}
+                  inputClassName="h-[50px] border-slate-300 dark:border-slate-600 rounded-xl px-3.5 py-1.5"
                 />
-              </label>
+              </div>
 
               {/* Botón circular de búsqueda */}
               <button
@@ -610,21 +607,20 @@ export function HomePage() {
                 </div>
 
                 {/* Fecha */}
-                <label id="campo-fecha" className="flex flex-col gap-2">
+                <div id="campo-fecha" className="flex flex-col gap-2">
                   <span className="text-sm font-semibold text-[#111318] dark:text-slate-200 flex items-center gap-2">
                     <span className="material-symbols-outlined text-[#0e3a8c] dark:text-blue-400 text-lg">calendar_month</span> {h.fecha}
                   </span>
-                  <input
-                    type="date"
+                  <DatePicker
                     value={fecha}
                     min={hoyISO()}
                     onChange={handleFechaChange}
-                    className={`w-full bg-[#f6f6f8] dark:bg-slate-700 text-slate-800 dark:text-slate-100 border-none rounded-lg h-12 px-4 focus:ring-2 focus:ring-[#0e3a8c] dark:focus:ring-blue-400 outline-none transition-all text-sm ${
-                      fechaError ? 'ring-2 ring-red-400' : ''
-                    }`}
+                    error={fechaError}
+                    placeholder="dd/mm/aaaa"
+                    inputClassName="bg-[#f6f6f8] dark:bg-slate-700 border-none h-12"
+                    desplegarArriba
                   />
-                  {fechaError && <p className="text-xs text-red-500 -mt-1">{fechaError}</p>}
-                </label>
+                </div>
 
                 <button
                   id="boton-limpiar"

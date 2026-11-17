@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { create } from 'zustand';
 import { almacenApi, type Bodega, type Id, type Producto } from '../../../infrastructure/services/almacenApi';
+import { DatePicker } from '@/components/ui/date-picker';
 
 /**
  * Kit visual y utilidades compartidas por las páginas del Almacén.
@@ -310,10 +311,14 @@ export function StatCard({ icon, label, valor, detalle, tone = BLUE }: { icon: s
 
 export function FiltroFechas({ desde, hasta, onDesde, onHasta }: { desde: string; hasta: string; onDesde: (v: string) => void; onHasta: (v: string) => void }) {
   return (
-    <>
-      <input type="date" value={desde} max={hasta} onChange={(e) => onDesde(e.target.value)} style={{ ...inputStyle, width: 'auto', padding: '7px 10px' }} aria-label="Desde" />
-      <input type="date" value={hasta} min={desde} onChange={(e) => onHasta(e.target.value)} style={{ ...inputStyle, width: 'auto', padding: '7px 10px' }} aria-label="Hasta" />
-    </>
+    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+      <div style={{ width: '140px' }}>
+        <DatePicker value={desde} max={hasta} onChange={onDesde} inputClassName="h-[34px] text-xs rounded-lg" placeholder="Desde" />
+      </div>
+      <div style={{ width: '140px' }}>
+        <DatePicker value={hasta} min={desde} onChange={onHasta} inputClassName="h-[34px] text-xs rounded-lg" placeholder="Hasta" />
+      </div>
+    </div>
   );
 }
 

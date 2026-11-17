@@ -12,14 +12,18 @@
   "dependencies": {
     "@react-oauth/google": "^0.13.4",
     "@supabase/supabase-js": "^2.105.3",
+    "@tabler/icons-react": "^3.52.0",
     "axios": "^1.16.0",
+    "clsx": "^2.1.1",
     "driver.js": "^1.7.0",
+    "framer-motion": "^14.14.0",
     "gsap": "^3.15.0",
     "heic2any": "^0.0.4",
     "qrcode": "^1.5.4",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.13.1",
+    "tailwind-merge": "^3.7.0",
     "zustand": "^5.0.11"
   },
   "devDependencies": {

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Layout } from '../../components/layout/Layout';
 import { cont } from '../../../infrastructure/services/contabilidadApi';
+import { DatePicker } from '@/components/ui/date-picker';
 import {
   Alerta, Badge, Btn, Card, CardHeader, CuentaSelect, Field, FiltroFechas, Grid, Kpi, Modal, Tabla, Tabs, escHtml, exportarExcel,
   hoyCO, imprimirDocumento, inicioMes, inputStyle, money, tablaHtml, useMensaje,
@@ -65,8 +66,8 @@ function Retenciones() {
       <p><b>Retenedor:</b> ${escHtml(c.empresa.razonsocial)} · NIT ${escHtml(c.empresa.nit)}${c.empresa.dv !== null ? '-' + c.empresa.dv : ''}</p>
       <p><b>Retenido:</b> ${escHtml(c.tercero.nombre)} · ${escHtml(c.tercero.tipodocumento)} ${escHtml(c.tercero.documento)}${c.tercero.dv !== null && c.tercero.dv !== undefined ? '-' + c.tercero.dv : ''}</p>
       ${tablaHtml([{ t: 'Concepto' }, { t: 'Base', r: true }, { t: 'Valor retenido', r: true }],
-        c.conceptos.map((x: any) => [`${x.codigo} ${x.concepto}`, money(x.base), money(x.retenido)]),
-        ['Total', '', money(c.conceptos.reduce((a: number, x: any) => a + Number(x.retenido), 0))])}
+      c.conceptos.map((x: any) => [`${x.codigo} ${x.concepto}`, money(x.base), money(x.retenido)]),
+      ['Total', '', money(c.conceptos.reduce((a: number, x: any) => a + Number(x.retenido), 0))])}
       <p class="muted">Ciudad y fecha de expedición: ____________________</p><p class="muted" style="margin-top:40px">Firma del agente retenedor ____________________</p>`);
   };
   const filas = q.data?.filas ?? [];
@@ -185,8 +186,12 @@ function Config() {
             <Field label="Nombre" required><input value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} style={inputStyle} /></Field>
             <Field label={form.tipo === 'ICA' ? 'Tarifa (por mil)' : 'Tarifa (%)'} required><input type="number" step="any" value={form.tarifa} onChange={(e) => setForm({ ...form, tarifa: e.target.value })} style={inputStyle} /></Field>
             <Field label="Base mínima (UVT)"><input type="number" step="any" value={form.baseminimauvt} onChange={(e) => setForm({ ...form, baseminimauvt: e.target.value })} style={inputStyle} /></Field>
-            <Field label="Vigente desde" required><input type="date" value={form.vigentedesde} onChange={(e) => setForm({ ...form, vigentedesde: e.target.value })} style={inputStyle} /></Field>
-            <Field label="Vigente hasta"><input type="date" value={form.vigentehasta} onChange={(e) => setForm({ ...form, vigentehasta: e.target.value })} style={inputStyle} /></Field>
+            <Field label="Vigente desde" required>
+              <DatePicker value={form.vigentedesde} onChange={(val) => setForm({ ...form, vigentedesde: val })} inputClassName="h-[36px] text-xs rounded-lg" />
+            </Field>
+            <Field label="Vigente hasta">
+              <DatePicker value={form.vigentehasta} min={form.vigentedesde} onChange={(val) => setForm({ ...form, vigentehasta: val })} inputClassName="h-[36px] text-xs rounded-lg" />
+            </Field>
           </Grid>
           <Field label="Cuenta contable" style={{ marginTop: 10 }}><CuentaSelect value={form.idcuenta} onChange={(c) => setForm({ ...form, idcuenta: c?.idcuenta ?? null })} /></Field>
           <label style={{ display: 'flex', gap: 6, marginTop: 10, fontSize: 13 }}><input type="checkbox" checked={form.activo} onChange={(e) => setForm({ ...form, activo: e.target.checked })} /> Activo</label>

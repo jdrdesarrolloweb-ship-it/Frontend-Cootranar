@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Layout } from '../../components/layout/Layout';
 import { cont, type Cuenta, type Tercero } from '../../../infrastructure/services/contabilidadApi';
+import { DatePicker } from '@/components/ui/date-picker';
 import {
   Alerta, Badge, BLUE, Btn, Card, CardHeader, CentroSelect, CuentaSelect, Field, FiltroFechas, Grid, Modal, Paginador, Tabla,
   TerceroPicker, Valor, escHtml, hoyCO, imprimirDocumento, inicioMes, inputStyle, money, pedirMotivo, tablaHtml, useMensaje,
@@ -147,7 +148,9 @@ export const ComprobantesPage = () => {
                 {(tipos.data ?? []).filter((t) => t.manual).map((t) => <option key={t.codigo} value={t.codigo}>{t.codigo} · {t.nombre}</option>)}
               </select>
             </Field>
-            <Field label="Fecha" required><input type="date" value={editor.fecha} onChange={(e) => setEditor({ ...editor, fecha: e.target.value })} style={inputStyle} /></Field>
+            <Field label="Fecha" required>
+              <DatePicker value={editor.fecha} onChange={(val) => setEditor({ ...editor, fecha: val })} inputClassName="h-[36px] text-xs rounded-lg" />
+            </Field>
             <Field label="Descripción" required><input value={editor.descripcion} onChange={(e) => setEditor({ ...editor, descripcion: e.target.value })} style={inputStyle} /></Field>
           </Grid>
           <div style={{ overflowX: 'auto', marginTop: 14 }}>

@@ -3,6 +3,7 @@ import { vehiculosApi, propietariosApi, tiposBusApi, tiposServicioApi, asegurado
 import { conductoresApi } from '../../../infrastructure/services/conductoresApi';
 import DisenadorAsientos from './DisenadorAsientos';
 import gsap from 'gsap';
+import { DatePicker } from '@/components/ui/date-picker';
 
 const PASOS_BUS = ['Propietario', 'Vehículo', 'Asientos', 'Documentos', 'Pólizas', 'Conductores'];
 const PASOS_FURGON = ['Propietario', 'Vehículo', 'Documentos', 'Pólizas', 'Conductores'];
@@ -913,12 +914,10 @@ export default function FormularioVehiculoMultiPaso({ onVehiculoCreado, onCancel
             </div>
             <FLD>
               <label style={LB}>Fecha vencimiento <span style={REQ}>*</span></label>
-              <input 
-                type="date" 
+              <DatePicker 
                 value={propConductorData.fechavencimientolicencia}
-                onChange={(e) => setPropConductorData(p => ({ ...p, fechavencimientolicencia: e.target.value }))} 
-                style={IS}
-                onFocus={onFocus} onBlur={onBlur}
+                onChange={(val) => setPropConductorData(p => ({ ...p, fechavencimientolicencia: val }))} 
+                inputClassName="h-[44px] text-sm rounded-lg"
               />
             </FLD>
             <FLD>
@@ -1199,7 +1198,7 @@ export default function FormularioVehiculoMultiPaso({ onVehiculoCreado, onCancel
             </FLD>
             <FLD>
               <label style={LB}>Fecha vencimiento <span style={REQ}>*</span></label>
-              <input type="date" style={IS} value={documentos[tipo].fechavencimiento} onChange={(e) => setDocumentos((d: any) => ({ ...d, [tipo]: { ...d[tipo], fechavencimiento: e.target.value } }))} onFocus={onFocus} onBlur={onBlur} />
+              <DatePicker value={documentos[tipo].fechavencimiento} onChange={(val) => setDocumentos((d: any) => ({ ...d, [tipo]: { ...d[tipo], fechavencimiento: val } }))} inputClassName="h-[44px] text-sm rounded-lg" />
             </FLD>
           </div>
           <FLD>
@@ -1251,7 +1250,7 @@ export default function FormularioVehiculoMultiPaso({ onVehiculoCreado, onCancel
           <div style={{ marginBottom: '16px' }}>
             <FLD>
               <label style={LB}>Fecha vencimiento <span style={REQ}>*</span></label>
-              <input type="date" style={IS} value={polizas[tipo].fechavencimiento} onChange={(e) => setPolizas((p: any) => ({ ...p, [tipo]: { ...p[tipo], fechavencimiento: e.target.value } }))} onFocus={onFocus} onBlur={onBlur} />
+              <DatePicker value={polizas[tipo].fechavencimiento} onChange={(val) => setPolizas((p: any) => ({ ...p, [tipo]: { ...p[tipo], fechavencimiento: val } }))} inputClassName="h-[44px] text-sm rounded-lg" />
             </FLD>
           </div>
           <FLD>
@@ -1512,13 +1511,10 @@ export default function FormularioVehiculoMultiPaso({ onVehiculoCreado, onCancel
             <div style={{ marginBottom: '20px' }}>
               <FLD>
                 <label style={LB}>Fecha vencimiento <span style={REQ}>*</span></label>
-                <input 
-                  type="date" 
+                <DatePicker 
                   value={nuevoCond.fechavencimientolicencia} 
-                  onChange={(e) => setNuevoCond(p => ({ ...p, fechavencimientolicencia: e.target.value }))} 
-                  style={IS} 
-                  onFocus={onFocus} 
-                  onBlur={onBlur} 
+                  onChange={(val) => setNuevoCond(p => ({ ...p, fechavencimientolicencia: val }))} 
+                  inputClassName="h-[44px] text-sm rounded-lg" 
                 />
               </FLD>
             </div>

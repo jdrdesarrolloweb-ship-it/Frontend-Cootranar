@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Navbar } from '../../components/layout/Navbar';
 import { CinematicFooter } from '@/components/ui/motion-footer';
+import { DatePicker } from '@/components/ui/date-picker';
 import { TarjetaViaje } from '../../components/common/TarjetaViaje';
 import { GridTarjetasViajeSkeleton } from '../../components/common/TarjetaViajeSkeleton';
 import { usePreferencias } from '../../context/PreferenciasContext';
@@ -375,10 +376,15 @@ export function ViajesDestinosPage() {
                     {destinos.map((d) => <option key={d.nombre} value={d.nombre}>{d.nombre}</option>)}
                   </select>
                 </label>
-                <label className="block">
+                <div className="block">
                   <span className="text-xs font-bold text-slate-500 dark:text-slate-400">{es ? 'Fecha' : 'Date'}</span>
-                  <input type="date" value={fecha} onChange={(e) => setFiltro('fecha', e.target.value)} className={`${selectCls} mt-1`} />
-                </label>
+                  <DatePicker
+                    value={fecha}
+                    onChange={(val) => setFiltro('fecha', val)}
+                    placeholder={es ? 'Seleccionar fecha' : 'Select date'}
+                    inputClassName="mt-1 h-[42px] text-sm"
+                  />
+                </div>
                 <label className="block">
                   <span className="text-xs font-bold text-slate-500 dark:text-slate-400">{es ? 'Ordenar por' : 'Sort by'}</span>
                   <select value={orden} onChange={(e) => setFiltro('orden', e.target.value === 'fecha' ? '' : e.target.value)} className={`${selectCls} mt-1`}>

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Layout } from '../../components/layout/Layout';
 import { cont, type Cuenta } from '../../../infrastructure/services/contabilidadApi';
+import { DatePicker } from '@/components/ui/date-picker';
 import {
   Btn, Card, CardHeader, CentroSelect, CuentaSelect, Field, FiltroFechas, Tabla, Tabs, Valor, escHtml, exportarExcel, hoyCO,
   imprimirDocumento, inicioMes, inputStyle, money, tablaHtml,
@@ -34,8 +35,11 @@ function Balance({ desde, hasta, setDesde, setHasta }: P) {
   const [idcentro, setIdcentro] = useState<number | null>(null);
   const q = useQuery({ queryKey: ['cont', 'balance', desde, hasta, nivel, idcentro], queryFn: () => cont.get('/libros/balance-prueba', { desde, hasta, nivel, idcentro }) });
   const filas = q.data?.filas ?? [];
-  const exportar = () => exportarExcel(`balance-prueba-${desde}-${hasta}`, [{ nombre: 'Balance', filas: filas.map((f: any) => ({
-    Código: f.codigo, Cuenta: f.nombre, Nivel: f.nivel, 'Saldo inicial': f.inicial, Débitos: f.debitos, Créditos: f.creditos, 'Saldo final': f.final })) }]);
+  const exportar = () => exportarExcel(`balance-prueba-${desde}-${hasta}`, [{
+    nombre: 'Balance', filas: filas.map((f: any) => ({
+      Código: f.codigo, Cuenta: f.nombre, Nivel: f.nivel, 'Saldo inicial': f.inicial, Débitos: f.debitos, Créditos: f.creditos, 'Saldo final': f.final
+    }))
+  }]);
   const imprimir = () => imprimirDocumento('Balance de prueba', `<h1>Balance de prueba</h1><div class="muted">${desde} a ${hasta}</div>${tablaHtml(
     [{ t: 'Código' }, { t: 'Cuenta' }, { t: 'Saldo inicial', r: true }, { t: 'Débitos', r: true }, { t: 'Créditos', r: true }, { t: 'Saldo final', r: true }],
     filas.map((f: any) => [f.codigo, ' '.repeat((f.nivel - 1) * 3) + f.nombre, money(f.inicial), money(f.debitos), money(f.creditos), money(f.final)]),
@@ -75,12 +79,15 @@ function Diario({ desde, hasta, setDesde, setHasta }: P) {
     <Card>
       <CardHeader icon="menu_book" title="Libro diario">
         <FiltroFechas desde={desde} hasta={hasta} onDesde={setDesde} onHasta={setHasta} />
-        <Btn variant="secondary" icon="download" onClick={() => exportarExcel(`libro-diario-${desde}-${hasta}`, [{ nombre: 'Diario', filas: filas.map((f: any) => ({
-          Fecha: String(f.fecha).slice(0, 10), Comprobante: f.comprobante, Descripción: f.descripcion, Cuenta: f.codigo, 'Nombre cuenta': f.cuenta,
-          Tercero: f.documento ?? '', 'Nombre tercero': f.tercero ?? '', Centro: f.centro ?? '', Débito: Number(f.debito), Crédito: Number(f.credito) })) }])}>Excel</Btn>
+        <Btn variant="secondary" icon="download" onClick={() => exportarExcel(`libro-diario-${desde}-${hasta}`, [{
+          nombre: 'Diario', filas: filas.map((f: any) => ({
+            Fecha: String(f.fecha).slice(0, 10), Comprobante: f.comprobante, Descripción: f.descripcion, Cuenta: f.codigo, 'Nombre cuenta': f.cuenta,
+            Tercero: f.documento ?? '', 'Nombre tercero': f.tercero ?? '', Centro: f.centro ?? '', Débito: Number(f.debito), Crédito: Number(f.credito)
+          }))
+        }])}>Excel</Btn>
       </CardHeader>
       {q.data && <div style={{ padding: '10px 20px', fontSize: 13 }}>Débitos <b>{money(q.data.debitos)}</b> · Créditos <b>{money(q.data.creditos)}</b> · <b style={{ color: q.data.cuadra ? '#15803d' : '#b91c1c' }}>{q.data.cuadra ? 'Cuadrado' : 'Descuadre'}</b>{filas.length >= 5000 ? ' · mostrando las primeras 5.000 líneas' : ''}</div>}
-      <Tabla cargando={q.isLoading} filas={filas} clave={(f: any, ) => `${f.idcomprobante}-${f.codigo}-${f.debito}-${f.credito}-${f.detalle}-${f.documento}`} columnas={[
+      <Tabla cargando={q.isLoading} filas={filas} clave={(f: any,) => `${f.idcomprobante}-${f.codigo}-${f.debito}-${f.credito}-${f.detalle}-${f.documento}`} columnas={[
         { label: 'Fecha', render: (f: any) => String(f.fecha).slice(0, 10) },
         { label: 'Comprobante', render: (f: any) => <b>{f.comprobante}</b> },
         { label: 'Cuenta', render: (f: any) => <><b>{f.codigo}</b> {f.cuenta}</> },
@@ -108,9 +115,12 @@ function Mayor({ desde, hasta, setDesde, setHasta }: P) {
           <option value="">o una cuenta mayor…</option>
           {(cuentas.data ?? []).filter((c) => c.nivel <= 3).map((c) => <option key={c.idcuenta} value={c.codigo}>{c.codigo} · {c.nombre}</option>)}
         </select>
-        {q.data && <Btn variant="secondary" icon="download" onClick={() => exportarExcel(`mayor-${q.data.cuenta.codigo}`, [{ nombre: 'Mayor', filas: q.data.filas.map((f: any) => ({
-          Fecha: String(f.fecha).slice(0, 10), Comprobante: f.comprobante, Cuenta: f.codigo, Tercero: f.tercero ?? '', Detalle: f.detalle ?? f.descripcion,
-          Débito: Number(f.debito), Crédito: Number(f.credito), Saldo: f.saldo })) }])}>Excel</Btn>}
+        {q.data && <Btn variant="secondary" icon="download" onClick={() => exportarExcel(`mayor-${q.data.cuenta.codigo}`, [{
+          nombre: 'Mayor', filas: q.data.filas.map((f: any) => ({
+            Fecha: String(f.fecha).slice(0, 10), Comprobante: f.comprobante, Cuenta: f.codigo, Tercero: f.tercero ?? '', Detalle: f.detalle ?? f.descripcion,
+            Débito: Number(f.debito), Crédito: Number(f.credito), Saldo: f.saldo
+          }))
+        }])}>Excel</Btn>}
       </CardHeader>
       {!sel ? <p style={{ padding: 20, color: '#94a3b8' }}>Elige una cuenta.</p> : q.data && (
         <>
@@ -145,7 +155,9 @@ function Auxiliar({ hasta, setHasta }: { hasta: string; setHasta: (v: string) =>
   return (
     <Card>
       <CardHeader icon="groups" title="Auxiliar por tercero">
-        <Field label="Corte" style={{ width: 160 }}><input type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} style={inputStyle} /></Field>
+        <Field label="Corte" style={{ width: 160 }}>
+          <DatePicker value={hasta} onChange={setHasta} inputClassName="h-[36px] text-xs rounded-lg" />
+        </Field>
         <select value={codigo} onChange={(e) => setCodigo(e.target.value)} style={{ ...inputStyle, width: 280, padding: '7px 10px' }} aria-label="Cuenta">
           {(cuentas.data ?? []).filter((c) => c.nivel <= 4 && /^(13|22|23|24|25|28|1355|2365)/.test(c.codigo)).map((c) => <option key={c.idcuenta} value={c.codigo}>{c.codigo} · {c.nombre}</option>)}
         </select>

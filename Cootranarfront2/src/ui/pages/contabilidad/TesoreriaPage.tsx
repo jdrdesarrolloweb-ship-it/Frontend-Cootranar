@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Layout } from '../../components/layout/Layout';
 import { cont } from '../../../infrastructure/services/contabilidadApi';
+import { DatePicker } from '@/components/ui/date-picker';
 import {
   Alerta, Badge, Btn, Card, CardHeader, CuentaSelect, Field, FiltroFechas, Grid, Kpi, Modal, Tabla, Tabs, Valor, exportarExcel,
   hoyCO, inicioMes, inputStyle, money, useMensaje,
@@ -80,7 +81,9 @@ function Bancos() {
           <Field label="Hacia" required style={{ marginTop: 10 }}><CuentaSelect value={tr.idcuentadestino} filtro={(c) => c.codigo.startsWith('11')} onChange={(c) => setTr({ ...tr, idcuentadestino: c?.idcuenta ?? null })} /></Field>
           <Grid cols={2} style={{ marginTop: 10 }}>
             <Field label="Valor" required><input type="number" min={1} value={tr.valor} onChange={(e) => setTr({ ...tr, valor: e.target.value })} style={inputStyle} /></Field>
-            <Field label="Fecha" required><input type="date" value={tr.fecha} onChange={(e) => setTr({ ...tr, fecha: e.target.value })} style={inputStyle} /></Field>
+            <Field label="Fecha" required>
+              <DatePicker value={tr.fecha} onChange={(val) => setTr({ ...tr, fecha: val })} inputClassName="h-[36px] text-xs rounded-lg" />
+            </Field>
           </Grid>
           <Field label="Descripción" style={{ marginTop: 10 }}><input value={tr.descripcion} onChange={(e) => setTr({ ...tr, descripcion: e.target.value })} placeholder="Consignación de efectivo de caja" style={inputStyle} /></Field>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 14 }}>
@@ -240,7 +243,9 @@ function CuentasPorPagar() {
           <p style={{ fontSize: 13, marginTop: 0 }}>Saldo pendiente: <b>{money(pago.saldo)}</b></p>
           <Grid cols={2}>
             <Field label="Valor" required><input type="number" min={1} max={pago.saldo} value={pago.valor} onChange={(e) => setPago({ ...pago, valor: e.target.value })} style={inputStyle} /></Field>
-            <Field label="Fecha" required><input type="date" value={pago.fecha} onChange={(e) => setPago({ ...pago, fecha: e.target.value })} style={inputStyle} /></Field>
+            <Field label="Fecha" required>
+              <DatePicker value={pago.fecha} onChange={(val) => setPago({ ...pago, fecha: val })} inputClassName="h-[36px] text-xs rounded-lg" />
+            </Field>
             <Field label="Medio" required><select value={pago.medio} onChange={(e) => setPago({ ...pago, medio: e.target.value })} style={inputStyle}><option value="BANCO">Banco</option><option value="CAJA">Caja (mi turno abierto)</option></select></Field>
             {pago.medio === 'BANCO' && <Field label="Cuenta" required><select value={pago.idcuentabancaria ?? ''} onChange={(e) => setPago({ ...pago, idcuentabancaria: Number(e.target.value) })} style={inputStyle}>
               {(bancos.data ?? []).map((b) => <option key={b.idcuentabancaria} value={b.idcuentabancaria}>{b.banco} {b.numero}</option>)}

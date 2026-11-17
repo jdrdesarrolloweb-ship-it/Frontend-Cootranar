@@ -4,6 +4,7 @@ import taquillaApiService from '../../../infrastructure/services/taquillaApi';
 import { ModalReprogramarTiquete } from '../../components/viajes/ModalReprogramarTiquete';
 import { useSidebar } from '../../context/SidebarContext';
 import { formatFechaCalendario } from '../../../shared/utils/formatters';
+import { DatePicker } from '@/components/ui/date-picker';
 
 // ── Paleta ────────────────────────────────────────────────────────────────────
 const C = {
@@ -123,9 +124,9 @@ const BuscadorViajes = ({ onBuscar, cargando }: BuscadorProps) => {
           <input value={value} onChange={e => set(e.target.value)} placeholder={placeholder} style={inputStyle} />
         </div>
       ))}
-      <div style={{ flex: '1 1 140px', minWidth: '130px' }}>
+      <div style={{ flex: '1 1 150px', minWidth: '140px' }}>
         <label style={{ fontSize: '11px', fontWeight: '700', color: C.onSurfaceVariant, textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '6px', fontFamily: FONT }}>Fecha de Salida</label>
-        <input type="date" value={fecha} onChange={e => setFecha(e.target.value)} style={inputStyle} />
+        <DatePicker value={fecha} onChange={setFecha} inputClassName="h-[38px] text-xs rounded-lg" placeholder="Todas las fechas" />
       </div>
       <div style={{ flex: '1 1 140px', minWidth: '130px' }}>
         <label style={{ fontSize: '11px', fontWeight: '700', color: C.onSurfaceVariant, textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '6px', fontFamily: FONT }}>Nº de Tiquete</label>

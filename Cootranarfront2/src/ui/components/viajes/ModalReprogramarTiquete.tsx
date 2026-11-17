@@ -5,6 +5,7 @@ import metodosPagoApiService from '../../../infrastructure/services/metodosPagoA
 import { rutasApi } from '../../../infrastructure/services/rutasApi';
 import { SelectorAsientosBus } from './SelectorAsientosBus';
 import { formatFechaCalendario } from '../../../shared/utils/formatters';
+import { DatePicker } from '@/components/ui/date-picker';
 
 // ── Paleta (misma que GestionTiquetesPage) ───────────────────────────────────
 const C = {
@@ -486,7 +487,7 @@ export const ModalReprogramarTiquete = ({ tiquete, viajeActual, onClose, onExito
                 </div>
                 <div>
                   <label style={labelStyle} htmlFor="rp-fecha">Fecha de salida</label>
-                  <input id="rp-fecha" type="date" value={fecha} onChange={e => setFecha(e.target.value)} style={inputStyle} />
+                  <DatePicker id="rp-fecha" value={fecha} onChange={setFecha} inputClassName="h-[38px] text-xs rounded-lg" />
                 </div>
                 <div style={{ display: 'flex', alignItems: 'flex-end' }}>
                   <button onClick={handleBuscar} disabled={cargandoViajes} style={{ ...botonPrimario(cargandoViajes), width: '100%' }}>

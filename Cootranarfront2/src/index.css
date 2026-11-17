@@ -628,13 +628,34 @@ div:has(> table) {
 
 :root {
   color-scheme: light dark;
+  --background: #ffffff;
+  --foreground: #0f172a;
+  --muted-foreground: #64748b;
+  --border: #e2e8f0;
+  --primary: #0D3B8E;
+  --primary-foreground: #ffffff;
 
   &:has(> head > meta[name="color-scheme"][content="dark"]) {
     color-scheme: dark;
+    --background: #0f172a;
+    --foreground: #f8fafc;
+    --muted-foreground: #94a3b8;
+    --border: #334155;
+    --primary: #3b82f6;
+    --primary-foreground: #ffffff;
   }
   &:has(> head > meta[name="color-scheme"][content="light"]) {
     color-scheme: light;
   }
+}
+
+.dark {
+  --background: #0f172a;
+  --foreground: #f8fafc;
+  --muted-foreground: #94a3b8;
+  --border: #334155;
+  --primary: #3b82f6;
+  --primary-foreground: #ffffff;
 }
 
 /* Animaciones suaves */

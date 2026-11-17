@@ -63,13 +63,22 @@ export function MisViajesPage() {
       .finally(() => setLoading(false));
   }, [idioma]);
 
+  const normalize = (str: string) =>
+    str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
   const viajesFiltrados = viajes.filter(v => {
-    const coincideCodigo = !codigoBusqueda ||
-      (v.codigotiquete ?? '').toLowerCase().includes(codigoBusqueda.toLowerCase());
+    const termino = normalize(codigoBusqueda.trim());
+    const coincideTexto = !termino ||
+      normalize(v.codigotiquete ?? '').includes(termino) ||
+      normalize(v.origennombre ?? '').includes(termino) ||
+      normalize(v.destinonombre ?? '').includes(termino) ||
+      normalize(v.tipobus ?? '').includes(termino) ||
+      normalize(v.placa ?? '').includes(termino);
+
     const coincideFecha = !fechaBusqueda ||
       formatFecha(v.fechasalida, idioma).toLowerCase().includes(fechaBusqueda.toLowerCase());
     const coincideEstado = estadoFiltro === 'Todos' || v.estado === estadoFiltro;
-    return coincideCodigo && coincideFecha && coincideEstado;
+    return coincideTexto && coincideFecha && coincideEstado;
   });
 
   const handleDescargar = async (viaje: MiViaje) => {
@@ -133,14 +142,24 @@ export function MisViajesPage() {
             <div className="flex-1 min-w-0 w-full">
               <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-2 tracking-wide">{m.codigoTiquete}</label>
               <div className="flex items-center gap-2 border border-slate-200/60 dark:border-slate-700 rounded-full px-4 py-2.5 bg-[#f0f4fd]/60 dark:bg-slate-900/40">
-                <span className="material-symbols-outlined text-slate-400 dark:text-slate-500 text-lg">confirmation_number</span>
+                <span className="material-symbols-outlined text-slate-400 dark:text-slate-500 text-lg">search</span>
                 <input
                   type="text"
-                  placeholder={idioma === 'es' ? 'Ej. FE-12345' : 'e.g. FE-12345'}
+                  placeholder={idioma === 'es' ? 'Ej. Popayán, Cali o Código' : 'e.g. Popayán, Cali or Code'}
                   value={codigoBusqueda}
                   onChange={e => setCodigoBusqueda(e.target.value)}
                   className="flex-1 text-sm font-medium outline-none text-slate-700 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 bg-transparent min-w-0"
                 />
+                {codigoBusqueda && (
+                  <button
+                    type="button"
+                    onClick={() => setCodigoBusqueda('')}
+                    className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-sm flex items-center justify-center p-0.5"
+                    title="Borrar"
+                  >
+                    <span className="material-symbols-outlined text-base">close</span>
+                  </button>
+                )}
               </div>
             </div>
 

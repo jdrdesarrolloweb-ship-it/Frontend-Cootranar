@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Layout } from '../../components/layout/Layout';
 import { cont } from '../../../infrastructure/services/contabilidadApi';
+import { DatePicker } from '@/components/ui/date-picker';
 import {
   Btn, Card, CardHeader, CentroSelect, Field, FiltroFechas, Tabla, Tabs, Valor, escHtml, exportarExcel, hoyCO, imprimirDocumento,
-  inputStyle, money, tablaHtml,
+  money, tablaHtml,
 } from './contUi';
 
 type Tab = 'situacion' | 'resultados' | 'flujo' | 'patrimonio' | 'comparativo';
@@ -51,7 +52,9 @@ function Situacion({ encabezado, firmas }: E) {
   return (
     <Card>
       <CardHeader icon="account_balance" title="Estado de situación financiera">
-        <Field label="Corte" style={{ width: 160 }}><input type="date" value={corte} onChange={(e) => setCorte(e.target.value)} style={inputStyle} /></Field>
+        <Field label="Corte" style={{ width: 160 }}>
+          <DatePicker value={corte} onChange={setCorte} inputClassName="h-[36px] text-xs rounded-lg" />
+        </Field>
         <Btn variant="secondary" icon="print" onClick={imprimir}>PDF / imprimir</Btn>
         {d && <Btn variant="secondary" icon="download" onClick={() => exportarExcel(`situacion-financiera-${corte}`, ['activo', 'pasivo', 'patrimonio'].map((k) => ({ nombre: k, filas: d[k].cuentas.map((c: any) => ({ Código: c.codigo, Cuenta: c.nombre, Valor: c.final })) })))}>Excel</Btn>}
       </CardHeader>

@@ -5,6 +5,7 @@ import type {
   PromocionMillas, PromocionMillasInput,
   TipoPromocion, OrigenPromocion,
 } from '../../../infrastructure/services/configuracionMillasApi';
+import { DatePicker } from '@/components/ui/date-picker';
 import {
   C, FONT, inputStyle, labelStyle, grid2,
   botonPrimario, botonSecundario, botonPeligro,
@@ -430,12 +431,10 @@ export const ModalPromocion = ({ promocion, rutas, onClose, onGuardar, guardando
 
       <div style={grid2}>
         <Campo label="Desde *" id="promo-inicio">
-          <input id="promo-inicio" type="date" value={fechaInicio}
-            onChange={e => setFechaInicio(e.target.value)} style={inputStyle} />
+          <DatePicker id="promo-inicio" value={fechaInicio} onChange={setFechaInicio} inputClassName="h-[36px] text-xs rounded-lg" />
         </Campo>
         <Campo label="Hasta *" id="promo-fin">
-          <input id="promo-fin" type="date" value={fechaFin}
-            onChange={e => setFechaFin(e.target.value)} style={inputStyle} />
+          <DatePicker id="promo-fin" value={fechaFin} min={fechaInicio} onChange={setFechaFin} inputClassName="h-[36px] text-xs rounded-lg" />
         </Campo>
       </div>
 

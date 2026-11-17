@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Layout } from '../../components/layout/Layout';
 import { cont, type Cuenta } from '../../../infrastructure/services/contabilidadApi';
+import { DatePicker } from '@/components/ui/date-picker';
 import {
   Alerta, Badge, Btn, Card, CardHeader, CentroSelect, CuentaSelect, Field, Grid, Kpi, MESES, Modal, Tabla, TerceroPicker, Valor,
   exportarExcel, hoyCO, inputStyle, money, pedirMotivo, useMensaje,
@@ -54,10 +55,12 @@ export const ActivosPage = () => {
           { label: 'Valor libros', align: 'right', render: (a: any) => <b>{money(a.valorlibros)}</b> },
           { label: 'Vida útil', render: (a: any) => `${a.vidautilmeses} meses` },
           { label: 'Estado', render: (a: any) => <Badge tone={a.estado === 'ACTIVO' ? 'green' : 'gray'}>{a.estado}</Badge> },
-          { label: '', render: (a: any) => a.estado === 'ACTIVO' && <div style={{ display: 'flex', gap: 2 }}>
-            <Btn small variant="ghost" icon="edit" onClick={() => setForm({ ...a, fechaadquisicion: String(a.fechaadquisicion).slice(0, 10) })} />
-            <Btn small variant="ghost" icon="delete_forever" title="Dar de baja" onClick={() => { const mo = pedirMotivo(`dar de baja ${a.codigo}`); if (mo) baja.mutate({ id: a.idactivo, motivo: mo }); }} />
-          </div> },
+          {
+            label: '', render: (a: any) => a.estado === 'ACTIVO' && <div style={{ display: 'flex', gap: 2 }}>
+              <Btn small variant="ghost" icon="edit" onClick={() => setForm({ ...a, fechaadquisicion: String(a.fechaadquisicion).slice(0, 10) })} />
+              <Btn small variant="ghost" icon="delete_forever" title="Dar de baja" onClick={() => { const mo = pedirMotivo(`dar de baja ${a.codigo}`); if (mo) baja.mutate({ id: a.idactivo, motivo: mo }); }} />
+            </div>
+          },
         ]} />
       </Card>
       {form && (
@@ -66,7 +69,9 @@ export const ActivosPage = () => {
             <Field label="Código" required><input value={form.codigo} onChange={(e) => setForm({ ...form, codigo: e.target.value })} style={inputStyle} /></Field>
             <Field label="Nombre" required><input value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} style={inputStyle} /></Field>
             <Field label="Categoría" required><input value={form.categoria} onChange={(e) => setForm({ ...form, categoria: e.target.value })} style={inputStyle} /></Field>
-            <Field label="Fecha de adquisición" required><input type="date" value={form.fechaadquisicion} onChange={(e) => setForm({ ...form, fechaadquisicion: e.target.value })} style={inputStyle} /></Field>
+            <Field label="Fecha de adquisición" required>
+              <DatePicker value={form.fechaadquisicion} onChange={(val) => setForm({ ...form, fechaadquisicion: val })} inputClassName="h-[36px] text-xs rounded-lg" />
+            </Field>
             <Field label="Costo" required><input type="number" value={form.costo} onChange={(e) => setForm({ ...form, costo: e.target.value })} style={inputStyle} /></Field>
             <Field label="Valor residual"><input type="number" value={form.valorresidual} onChange={(e) => setForm({ ...form, valorresidual: e.target.value })} style={inputStyle} /></Field>
             <Field label="Vida útil (meses)" required><input type="number" value={form.vidautilmeses} onChange={(e) => setForm({ ...form, vidautilmeses: e.target.value })} style={inputStyle} /></Field>
@@ -156,9 +161,12 @@ export const NominaPage = () => {
   const invalidar = () => qc.invalidateQueries({ queryKey: ['cont'] });
   const guardar = useMutation({
     mutationFn: () => {
-      const body = { anio: form.anio, mes: form.mes, descripcion: form.descripcion, empleados: form.empleados.map((e: any) => ({
-        idtercero: e.tercero?.idtercero, documento: e.documento, nombre: e.nombre, idcentro: e.idcentro,
-        salario: Number(e.salario || 0), auxtransporte: Number(e.auxtransporte || 0), otrosdevengos: Number(e.otrosdevengos || 0), otrasdeducciones: Number(e.otrasdeducciones || 0) })) };
+      const body = {
+        anio: form.anio, mes: form.mes, descripcion: form.descripcion, empleados: form.empleados.map((e: any) => ({
+          idtercero: e.tercero?.idtercero, documento: e.documento, nombre: e.nombre, idcentro: e.idcentro,
+          salario: Number(e.salario || 0), auxtransporte: Number(e.auxtransporte || 0), otrosdevengos: Number(e.otrosdevengos || 0), otrasdeducciones: Number(e.otrasdeducciones || 0)
+        }))
+      };
       return form.idnomina ? cont.put(`/nominas/${form.idnomina}`, body) : cont.post('/nominas', body);
     },
     onSuccess: () => { m.ok('Nómina guardada en borrador'); setForm(null); invalidar(); }, onError: (e) => m.err(e),
@@ -197,8 +205,12 @@ export const NominaPage = () => {
           ]} />
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 14 }}>
             {det.data.estado === 'BORRADOR' && <>
-              <Btn variant="secondary" icon="edit" onClick={() => { setForm({ idnomina: det.data.idnomina, anio: det.data.anio, mes: det.data.mes, descripcion: det.data.descripcion,
-                empleados: det.data.detalle.map((d: any) => ({ tercero: { idtercero: d.idtercero, documento: d.documento, nombre: d.nombre }, idcentro: d.idcentro, salario: String(Number(d.salario)), auxtransporte: String(Number(d.auxtransporte)), otrosdevengos: String(Number(d.otrosdevengos)), otrasdeducciones: String(Number(d.otrasdeducciones)) })) }); setVer(null); }}>Editar</Btn>
+              <Btn variant="secondary" icon="edit" onClick={() => {
+                setForm({
+                  idnomina: det.data.idnomina, anio: det.data.anio, mes: det.data.mes, descripcion: det.data.descripcion,
+                  empleados: det.data.detalle.map((d: any) => ({ tercero: { idtercero: d.idtercero, documento: d.documento, nombre: d.nombre }, idcentro: d.idcentro, salario: String(Number(d.salario)), auxtransporte: String(Number(d.auxtransporte)), otrosdevengos: String(Number(d.otrosdevengos)), otrasdeducciones: String(Number(d.otrasdeducciones)) }))
+                }); setVer(null);
+              }}>Editar</Btn>
               <Btn variant="success" icon="task_alt" disabled={causar.isPending} onClick={() => causar.mutate(det.data.idnomina)}>Causar</Btn>
             </>}
             {det.data.estado === 'CAUSADA' && <Btn variant="danger" icon="undo" onClick={() => { const mo = pedirMotivo('anular la nómina'); if (mo) anular.mutate({ id: det.data.idnomina, motivo: mo }); }}>Anular (reverso)</Btn>}
