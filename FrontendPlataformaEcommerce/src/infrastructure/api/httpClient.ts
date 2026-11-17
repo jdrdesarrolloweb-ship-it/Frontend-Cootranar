@@ -9,10 +9,14 @@ declare module 'axios' {
      * modal de inicio de sesión sin perder la vista de compra).
      */
     skipAuthRedirect?: boolean;
+    _retriedRemote?: boolean;
   }
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+const isLocalHost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+const LOCAL_API_URL = 'http://localhost:3000/api';
+const REMOTE_API_URL = import.meta.env.VITE_API_URL || 'https://cootranar-api-ecosystem.onrender.com/api';
+const API_BASE_URL = isLocalHost ? LOCAL_API_URL : REMOTE_API_URL;
 
 export const httpClient = axios.create({
   baseURL: API_BASE_URL,
@@ -75,6 +79,13 @@ httpClient.interceptors.response.use(
     return response;
   },
   async (error) => {
+    // Si estamos en localhost y el gateway local (:3000) no responde, caer automáticamente al gateway de Render
+    if (isLocalHost && !error.response && error.config && !error.config._retriedRemote && REMOTE_API_URL !== LOCAL_API_URL) {
+      error.config._retriedRemote = true;
+      error.config.baseURL = REMOTE_API_URL;
+      return httpClient.request(error.config);
+    }
+
     if (error.response?.status === 401) {
       const currentPath = window.location.pathname;
       const requestUrl = error.config?.url || '';
