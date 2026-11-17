@@ -1,0 +1,30 @@
+export const ROUTES = {
+  LOGIN: '/login',
+  REGISTRO: '/registro',
+  VERIFICAR_EMAIL: '/verificar-email',
+  HOME: '/home',
+  VIAJES: '/viajes',
+  MIS_VIAJES: '/mis-viajes',
+  ENCOMIENDAS: '/encomiendas',
+  MIS_ENCOMIENDAS: '/mis-encomiendas',
+  MILLAS: '/millas',
+  PERFIL: '/perfil',
+  SELECCION_ASIENTOS: '/seleccion-asientos',
+  RECUPERAR_PASSWORD: '/recuperar-password',
+  VERIFICAR_CODIGO_PASSWORD: '/recuperar-password/verificar',
+  NUEVA_PASSWORD: '/nueva-password',
+  PAGO_RESULTADO: '/pago-resultado',
+  FORMULARIO_PASAJEROS: '/formulario-pasajeros',
+  QUIENES_SOMOS: '/quienes-somos',
+  QUIENES_SOMOS_MISION_VISION: '/quienes-somos/mision-vision',
+  QUIENES_SOMOS_CALIDAD: '/quienes-somos/sistema-calidad',
+  QUIENES_SOMOS_PASAJEROS: '/quienes-somos/transporte-pasajeros',
+  QUIENES_SOMOS_ENCOMIENDAS: '/quienes-somos/transporte-encomiendas',
+} as const;
+
+export const ESTADOS_TIQUETE = {
+  PENDIENTE: 'Pendiente',
+  CONFIRMADO: 'Confirmado',
+  CANCELADO: 'Cancelado',
+  USADO: 'Usado',
+} as const;

@@ -1,0 +1,21 @@
+/* Estilos personalizados para el botón de Google */
+.google-login-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.google-login-wrapper > div {
+  display: flex !important;
+  justify-content: center !important;
+}
+
+.google-login-wrapper iframe {
+  margin: 0 auto !important;
+}
+
+/* Asegurar que el iframe del botón de Google ocupe todo el ancho */
+iframe[src*="accounts.google.com"] {
+  width: 100% !important;
+  min-width: 100% !important;
+}

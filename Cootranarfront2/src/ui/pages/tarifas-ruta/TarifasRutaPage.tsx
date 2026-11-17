@@ -1,0 +1,541 @@
+import React, { useState, useMemo, useEffect } from 'react';
+import { Layout } from '../../components/layout/Layout';
+import { useRutas } from '../../hooks/useRutas';
+import { useTarifasRuta } from '../../hooks/useTarifasRuta';
+import { useTiposBus } from '../../hooks/useTiposBus';
+import { useAgencias } from '../../hooks/useAgencias';
+import { rutasApi } from '../../../infrastructure/services/rutasApi';
+
+const BLUE = '#0D3B8E';
+const ITEMS_PER_PAGE = 5;
+
+function PagBtn({ label, active, onClick }: { label: string; active?: boolean; onClick: () => void }) {
+  return (
+    <button onClick={onClick} style={{
+      minWidth: '30px', height: '30px', padding: '0 6px', border: `1px solid ${active ? BLUE : '#e2e8f0'}`,
+      borderRadius: '6px', background: active ? BLUE : 'white', color: active ? 'white' : '#475569',
+      fontSize: '13px', fontWeight: active ? 700 : 400, cursor: 'pointer', fontFamily: 'inherit',
+    }}>{label}</button>
+  );
+}
+
+function NavArrow({ icon, disabled, onClick }: { icon: string; disabled: boolean; onClick: () => void }) {
+  return (
+    <button onClick={onClick} disabled={disabled} style={{
+      width: '30px', height: '30px', border: '1px solid #e2e8f0', borderRadius: '6px', background: 'white',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      cursor: disabled ? 'default' : 'pointer', color: disabled ? '#cbd5e1' : '#475569',
+    }}>
+      <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>{icon}</span>
+    </button>
+  );
+}
+
+function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
+  return (
+    <div>
+      <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>
+        {label} {required && <span style={{ color: '#dc2626' }}>*</span>}
+      </label>
+      {children}
+    </div>
+  );
+}
+
+const inputStyle: React.CSSProperties = {
+  width: '100%', boxSizing: 'border-box', padding: '9px 12px',
+  border: '1px solid #e2e8f0', borderRadius: '7px', fontSize: '13px',
+  color: '#334155', outline: 'none', background: 'white', fontFamily: 'inherit',
+};
+
+export const TarifasRutaPage = () => {
+  const { rutas } = useRutas();
+  const { tiposBus } = useTiposBus();
+  const { agencias } = useAgencias();
+  const rutasList = useMemo(() => Array.isArray(rutas) ? rutas : [], [rutas]);
+  const tiposBusList = Array.isArray(tiposBus) ? tiposBus : [];
+  const agenciasList = Array.isArray(agencias) ? agencias : [];
+
+  const [selectedRutaId, setSelectedRutaId] = useState('');
+  const { tarifas, isLoading, create, update, remove } = useTarifasRuta(selectedRutaId || undefined);
+
+  const [tipoBusId, setTipoBusId] = useState('');
+  const [piso, setPiso] = useState('1');
+  const [puntoOrigenId, setPuntoOrigenId] = useState('');
+  const [puntoDestinoId, setPuntoDestinoId] = useState('');
+  const [valorNormal, setValorNormal] = useState('');
+  const [valorTraficoAlto, setValorTraficoAlto] = useState('');
+  const [adicionalPoltrona, setAdicionalPoltrona] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [formMsg, setFormMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
+  const [page, setPage] = useState(1);
+  const [filtroTipoBus, setFiltroTipoBus] = useState('');
+
+  // Puntos de la ruta seleccionada (para seleccionar origen/destino de tarifa)
+  const [puntosRuta, setPuntosRuta] = useState<any[]>([]);
+  const [loadingPuntos, setLoadingPuntos] = useState(false);
+
+  // Cargar puntos cuando cambia la ruta seleccionada
+  useEffect(() => {
+    if (!selectedRutaId) { setPuntosRuta([]); return; }
+    setLoadingPuntos(true);
+    rutasApi.obtenerPuntos(selectedRutaId)
+      .then(res => {
+        const puntos = res.data?.puntos || res.data?.data?.puntos || [];
+        setPuntosRuta(puntos.sort((a: any, b: any) => a.orden - b.orden));
+      })
+      .catch(() => setPuntosRuta([]))
+      .finally(() => setLoadingPuntos(false));
+  }, [selectedRutaId]);
+
+  // Puntos que pueden ser origen (solo los que tienen agencia y no son el último)
+  const puntosOrigen = useMemo(() => {
+    if (puntosRuta.length < 2) return [];
+    const maxOrden = Math.max(...puntosRuta.map(p => p.orden));
+    return puntosRuta.filter(p => p.idagencia && p.orden < maxOrden);
+  }, [puntosRuta]);
+
+  // Puntos que pueden ser destino (todos los que tienen orden mayor al origen seleccionado)
+  const puntosDestino = useMemo(() => {
+    if (!puntoOrigenId) return [];
+    const origenSeleccionado = puntosRuta.find(p => String(p.idpuntoruta) === puntoOrigenId);
+    if (!origenSeleccionado) return [];
+    return puntosRuta.filter(p => p.orden > origenSeleccionado.orden);
+  }, [puntosRuta, puntoOrigenId]);
+
+  // Deduplicar rutas por id para el selector (el backend devuelve N filas por ruta, una por tarifa)
+  const rutasUnicas = useMemo(() => {
+    const seen = new Set<string>();
+    return rutasList.filter(r => {
+      if (seen.has(r.id)) return false;
+      seen.add(r.id);
+      return true;
+    });
+  }, [rutasList]);
+
+  const list = useMemo(() => {
+    const arr = Array.isArray(tarifas) ? tarifas : [];
+    if (!filtroTipoBus) return arr;
+    return arr.filter(t => String((t as any).idTipoBus) === filtroTipoBus);
+  }, [tarifas, filtroTipoBus]);
+
+  const totalPages = Math.max(1, Math.ceil(list.length / ITEMS_PER_PAGE));
+  const paginated = list.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
+  const visiblePages = (() => {
+    if (totalPages <= 5) return Array.from({ length: totalPages }, (_, i) => i + 1);
+    const p: (number | '...')[] = [1];
+    if (page > 3) p.push('...');
+    for (let i = Math.max(2, page - 1); i <= Math.min(totalPages - 1, page + 1); i++) p.push(i);
+    if (page < totalPages - 2) p.push('...');
+    p.push(totalPages);
+    return p;
+  })();
+
+  const agName = (id: string) => agenciasList.find((a: any) => a.idagencia === parseInt(id))?.nombre ?? id;
+  const rutaLabel = (r: any) => r.nombre || `${agName(r.origen)} → ${agName(r.destino)}`;
+
+  const focusBorder = (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) => (e.currentTarget.style.borderColor = '#93b4e0');
+  const blurBorder = (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) => (e.currentTarget.style.borderColor = '#e2e8f0');
+
+  const resetForm = () => {
+    setTipoBusId('');
+    setPiso('1');
+    setPuntoOrigenId('');
+    setPuntoDestinoId('');
+    setValorNormal('');
+    setValorTraficoAlto('');
+    setAdicionalPoltrona('');
+    setEditingId(null);
+  };
+
+  const handleGuardar = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!selectedRutaId) { 
+      setFormMsg({ type: 'err', text: 'Selecciona una ruta primero.' }); 
+      return; 
+    }
+    
+    if (!tipoBusId || !valorNormal || !valorTraficoAlto) {
+      setFormMsg({ type: 'err', text: 'Tipo de bus, valor normal y valor tráfico alto son requeridos.' });
+      return;
+    }
+
+    if (!editingId && (!puntoOrigenId || !puntoDestinoId)) {
+      setFormMsg({ type: 'err', text: 'Debes seleccionar punto origen y punto destino.' });
+      return;
+    }
+
+    const payload: any = {
+      idruta: parseInt(selectedRutaId, 10),
+      idtipobus: parseInt(tipoBusId, 10),
+      piso: parseInt(piso, 10) || 1,
+      valornormal: Number(valorNormal),
+      valortraficoalto: Number(valorTraficoAlto),
+    };
+
+    // Solo incluir puntos al crear (no al editar, ya que no se puede cambiar el tramo)
+    if (!editingId) {
+      payload.idpuntoorigen = parseInt(puntoOrigenId, 10);
+      payload.idpuntodestino = parseInt(puntoDestinoId, 10);
+    }
+
+    if (adicionalPoltrona !== '') {
+      payload.adicionalpoltrona = Number(adicionalPoltrona);
+    }
+
+    const cb = {
+      onSuccess: () => { 
+        setFormMsg({ type: 'ok', text: editingId ? 'Tarifa actualizada.' : 'Tarifa creada.' }); 
+        resetForm(); 
+        setTimeout(() => setFormMsg(null), 3000); 
+      },
+      onError: (err: any) => { 
+        const msg = err?.response?.data?.message || 'Error al guardar tarifa.';
+        setFormMsg({ type: 'err', text: msg }); 
+        setTimeout(() => setFormMsg(null), 5000); 
+      },
+    };
+
+    editingId ? update.mutate({ id: editingId, data: payload }, cb) : create.mutate(payload, cb);
+  };
+
+  const handleDelete = (id: string) => { 
+    if (window.confirm('¿Eliminar esta tarifa?')) remove.mutate(id); 
+  };
+
+  const handleEditar = (t: any) => {
+    setEditingId(t.id);
+    setTipoBusId(String(t.idTipoBus));
+    setPiso(String(t.piso ?? 1));
+    setPuntoOrigenId('');
+    setPuntoDestinoId('');
+    setValorNormal(String(t.valorNormal ?? 0));
+    setValorTraficoAlto(String(t.valorTraficoAlto ?? 0));
+    setAdicionalPoltrona(t.adicionalPoltrona ? String(t.adicionalPoltrona) : '');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Tipos de bus ya configurados para la ruta seleccionada (para el filtro)
+  const tiposBusEnRuta = useMemo(() => {
+    const arr = Array.isArray(tarifas) ? tarifas : [];
+    const seen = new Set<string>();
+    return arr.filter(t => {
+      const key = String((t as any).idTipoBus);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [tarifas]);
+
+  return (
+    <Layout>
+      {/* ── Selector de Ruta + Tipo de Bus ─────────────────── */}
+      <div style={{ background: 'white', borderRadius: '10px', border: '1px solid #e8edf2', padding: '20px 24px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', marginBottom: '24px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+          <span className="material-symbols-outlined" style={{ fontSize: '20px', color: BLUE }}>payments</span>
+          <span style={{ fontWeight: 700, fontSize: '15px', color: '#0f172a' }}>Configuración de Tarifas por Ruta</span>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', maxWidth: '860px' }}>
+          <Field label="Seleccionar Ruta" required>
+            <select value={selectedRutaId} onChange={e => { setSelectedRutaId(e.target.value); resetForm(); setPage(1); setFiltroTipoBus(''); }}
+              style={{ ...inputStyle, appearance: 'none' }} onFocus={focusBorder} onBlur={blurBorder}>
+              <option value="">Seleccionar una ruta...</option>
+              {rutasUnicas.map(r => <option key={r.id} value={r.id}>{rutaLabel(r)}</option>)}
+            </select>
+          </Field>
+          <Field label="Filtrar por Tipo de Bus">
+            <select 
+              value={filtroTipoBus} 
+              onChange={e => { setFiltroTipoBus(e.target.value); setPage(1); }}
+              style={{ ...inputStyle, appearance: 'none', background: selectedRutaId ? 'white' : '#f8fafc', color: selectedRutaId ? '#334155' : '#94a3b8' }} 
+              onFocus={focusBorder} 
+              onBlur={blurBorder}
+              disabled={!selectedRutaId}
+            >
+              <option value="">Todos los tipos de bus</option>
+              {tiposBusEnRuta.map(t => (
+                <option key={(t as any).idTipoBus} value={String((t as any).idTipoBus)}>
+                  {(t as any).tipoBusNombre || tiposBusList.find(tb => tb.id === String((t as any).idTipoBus))?.nombre || `Bus #${(t as any).idTipoBus}`}
+                </option>
+              ))}
+            </select>
+          </Field>
+        </div>
+      </div>
+
+      {/* ── Formulario de Tarifa ───────────────────────────── */}
+      {selectedRutaId && (
+        <div style={{ background: 'white', borderRadius: '10px', border: '1px solid #e8edf2', padding: '20px 24px 22px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', marginBottom: '24px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
+            <span className="material-symbols-outlined" style={{ fontSize: '20px', color: BLUE }}>add_circle</span>
+            <span style={{ fontWeight: 700, fontSize: '15px', color: '#0f172a' }}>{editingId ? 'Editar Tarifa' : 'Agregar Tarifa'}</span>
+          </div>
+          <form onSubmit={handleGuardar}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '14px' }}>
+              <Field label="Tipo de Bus" required>
+                <select 
+                  value={tipoBusId} 
+                  onChange={e => setTipoBusId(e.target.value)}
+                  style={{ ...inputStyle, appearance: 'none' }} 
+                  onFocus={focusBorder} 
+                  onBlur={blurBorder}
+                >
+                  <option value="">Seleccionar tipo de bus...</option>
+                  {tiposBusList.map(tb => <option key={tb.id} value={tb.id}>{tb.nombre}</option>)}
+                </select>
+              </Field>
+              <Field label="Piso">
+                <select
+                  value={piso}
+                  onChange={e => setPiso(e.target.value)}
+                  style={{ ...inputStyle, appearance: 'none' }}
+                  onFocus={focusBorder}
+                  onBlur={blurBorder}
+                >
+                  <option value="1">Piso 1</option>
+                  <option value="2">Piso 2</option>
+                </select>
+              </Field>
+              <div />
+            </div>
+
+            {/* Selección de tramo (punto origen → punto destino) — solo al crear */}
+            {!editingId && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginTop: '14px' }}>
+                <Field label="Punto Origen (con agencia)" required>
+                  <select
+                    value={puntoOrigenId}
+                    onChange={e => { setPuntoOrigenId(e.target.value); setPuntoDestinoId(''); }}
+                    style={{ ...inputStyle, appearance: 'none', background: loadingPuntos ? '#f8fafc' : 'white' }}
+                    onFocus={focusBorder}
+                    onBlur={blurBorder}
+                    disabled={loadingPuntos || puntosOrigen.length === 0}
+                  >
+                    <option value="">{loadingPuntos ? 'Cargando puntos...' : puntosOrigen.length === 0 ? 'Sin puntos con agencia' : 'Seleccionar punto origen...'}</option>
+                    {puntosOrigen.map((p: any) => (
+                      <option key={p.idpuntoruta} value={String(p.idpuntoruta)}>
+                        [{p.orden}] {p.nombreagencia || p.nombre} {p.ciudadagencia ? `(${p.ciudadagencia})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+                <Field label="Punto Destino" required>
+                  <select
+                    value={puntoDestinoId}
+                    onChange={e => setPuntoDestinoId(e.target.value)}
+                    style={{ ...inputStyle, appearance: 'none', background: !puntoOrigenId ? '#f8fafc' : 'white' }}
+                    onFocus={focusBorder}
+                    onBlur={blurBorder}
+                    disabled={!puntoOrigenId || puntosDestino.length === 0}
+                  >
+                    <option value="">{!puntoOrigenId ? 'Selecciona origen primero' : 'Seleccionar punto destino...'}</option>
+                    {puntosDestino.map((p: any) => (
+                      <option key={p.idpuntoruta} value={String(p.idpuntoruta)}>
+                        [{p.orden}] {p.nombreagencia || p.nombre} {p.ciudadagencia ? `(${p.ciudadagencia})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+              </div>
+            )}
+            {editingId && (
+              <p style={{ fontSize: '11px', color: '#94a3b8', marginTop: '10px', fontStyle: 'italic' }}>
+                ℹ️ Al editar solo se pueden cambiar los precios. El tramo (origen → destino) no es modificable.
+              </p>
+            )}
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '14px', marginTop: '14px' }}>
+              <Field label="Valor Normal ($)" required>
+                <input 
+                  type="number" 
+                  value={valorNormal} 
+                  onChange={e => setValorNormal(e.target.value)}
+                  placeholder="Ej: 45000" 
+                  style={inputStyle} 
+                  onFocus={focusBorder} 
+                  onBlur={blurBorder} 
+                />
+              </Field>
+              <Field label="Valor Tráfico Alto ($)" required>
+                <input 
+                  type="number" 
+                  value={valorTraficoAlto} 
+                  onChange={e => setValorTraficoAlto(e.target.value)}
+                  placeholder="Ej: 54000" 
+                  style={inputStyle} 
+                  onFocus={focusBorder} 
+                  onBlur={blurBorder} 
+                />
+              </Field>
+              <Field label="Adicional Poltrona ($)">
+                <input 
+                  type="number" 
+                  value={adicionalPoltrona} 
+                  onChange={e => setAdicionalPoltrona(e.target.value)}
+                  placeholder="Ej: 5000" 
+                  style={inputStyle} 
+                  onFocus={focusBorder} 
+                  onBlur={blurBorder} 
+                />
+                <p style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>
+                  Costo adicional para asientos tipo poltrona.
+                </p>
+              </Field>
+            </div>
+            <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              {editingId && (
+                <button type="button" onClick={resetForm} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'white', color: '#64748b', border: '1px solid #cbd5e1', borderRadius: '7px', padding: '10px 16px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: '17px' }}>close</span> Cancelar
+                </button>
+              )}
+              <button type="submit" style={{ display: 'flex', alignItems: 'center', gap: '8px', background: BLUE, color: 'white', border: 'none', borderRadius: '7px', padding: '10px 20px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
+                onMouseEnter={e => (e.currentTarget.style.background = '#0a2f72')} onMouseLeave={e => (e.currentTarget.style.background = BLUE)}>
+                <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>{editingId ? 'edit' : 'save'}</span>
+                {editingId ? 'Actualizar Tarifa' : 'Guardar Tarifa'}
+              </button>
+            </div>
+            {formMsg && <p style={{ marginTop: '10px', fontSize: '13px', fontWeight: 600, color: formMsg.type === 'ok' ? '#16a34a' : '#dc2626', textAlign: 'right' }}>{formMsg.text}</p>}
+          </form>
+        </div>
+      )}
+
+      {/* ── Tabla de Tarifas ───────────────────────────────── */}
+      {selectedRutaId && (
+        <div style={{ background: 'white', borderRadius: '10px', border: '1px solid #e8edf2', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', borderBottom: '1px solid #f1f5f9' }}>
+            <span style={{ fontWeight: 700, fontSize: '15px', color: '#0f172a' }}>Tarifas Configuradas</span>
+          </div>
+          {isLoading ? (
+            <div style={{ padding: '60px', textAlign: 'center', color: '#94a3b8' }}>
+              <span className="material-symbols-outlined" style={{ fontSize: '32px', display: 'block', marginBottom: '8px' }}>hourglass_empty</span>
+              <span style={{ fontSize: '13px' }}>Cargando tarifas...</span>
+            </div>
+          ) : (
+            <>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ background: '#f8fafc' }}>
+                    {['Tramo', 'Tipo de Bus', 'Piso', 'Valor Normal', 'Valor Tráfico Alto', 'Adic. Poltrona', 'Acciones'].map(l => (
+                      <th 
+                        key={l} 
+                        style={{ 
+                          padding: '11px 16px', 
+                          textAlign: 'left', 
+                          fontSize: '10.5px', 
+                          fontWeight: 700, 
+                          color: '#64748b', 
+                          textTransform: 'uppercase', 
+                          letterSpacing: '0.08em', 
+                          borderBottom: '1px solid #e8edf2' 
+                        }}
+                      >
+                        {l}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {paginated.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} style={{ padding: '48px', textAlign: 'center', color: '#94a3b8', fontSize: '13px' }}>
+                        No hay tarifas configuradas para esta ruta.
+                      </td>
+                    </tr>
+                  ) : paginated.map(t => (
+                    <tr 
+                      key={t.id} 
+                      style={{ borderBottom: '1px solid #f1f5f9' }} 
+                      onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')} 
+                      onMouseLeave={e => (e.currentTarget.style.background = 'white')}
+                    >
+                      <td style={{ padding: '12px 16px', fontSize: '12.5px', color: '#1e293b' }}>
+                        <span style={{ fontWeight: 600 }}>{(t as any).nombrePuntoOrigen || '?'}</span>
+                        <span style={{ color: '#94a3b8', margin: '0 6px' }}>→</span>
+                        <span style={{ fontWeight: 600 }}>{(t as any).nombrePuntoDestino || '?'}</span>
+                      </td>
+                      <td style={{ padding: '12px 16px', fontSize: '13px', fontWeight: 600, color: '#1e293b' }}>
+                        {t.tipoBusNombre || tiposBusList.find(tb => tb.id === String(t.idTipoBus))?.nombre || t.idTipoBus}
+                      </td>
+                      <td style={{ padding: '12px 16px', fontSize: '13px', color: '#475569' }}>
+                        {(t as any).piso ?? 1}
+                      </td>
+                      <td style={{ padding: '12px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+                        ${((t as any).valorNormal ?? 0).toLocaleString()}
+                      </td>
+                      <td style={{ padding: '12px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+                        ${((t as any).valorTraficoAlto ?? 0).toLocaleString()}
+                      </td>
+                      <td style={{ padding: '12px 16px', fontSize: '13px', color: '#475569' }}>
+                        {(t as any).adicionalPoltrona && (t as any).adicionalPoltrona > 0
+                          ? <span style={{ fontWeight: 600 }}>${(t as any).adicionalPoltrona.toLocaleString()}</span>
+                          : <span style={{ color: '#cbd5e1' }}>—</span>
+                        }
+                      </td>
+                      <td style={{ padding: '12px 16px' }}>
+                        <div style={{ display: 'flex', gap: '10px' }}>
+                          <button 
+                            onClick={() => handleEditar(t)}
+                            style={{ 
+                              background: 'none', 
+                              border: 'none', 
+                              padding: 0, 
+                              cursor: 'pointer', 
+                              color: '#94a3b8', 
+                              display: 'flex' 
+                            }}
+                            onMouseEnter={e => (e.currentTarget.style.color = BLUE)} 
+                            onMouseLeave={e => (e.currentTarget.style.color = '#94a3b8')}
+                          >
+                            <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>edit</span>
+                          </button>
+                          <button 
+                            onClick={() => handleDelete(t.id)}
+                            style={{ 
+                              background: 'none', 
+                              border: 'none', 
+                              padding: 0, 
+                              cursor: 'pointer', 
+                              color: '#94a3b8', 
+                              display: 'flex' 
+                            }}
+                            onMouseEnter={e => (e.currentTarget.style.color = '#dc2626')} 
+                            onMouseLeave={e => (e.currentTarget.style.color = '#94a3b8')}
+                          >
+                            <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>delete</span>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '13px 20px', borderTop: '1px solid #f1f5f9' }}>
+                <span style={{ fontSize: '12.5px', color: '#94a3b8' }}>
+                  Mostrando <strong style={{ color: '#475569' }}>{list.length === 0 ? 0 : (page - 1) * ITEMS_PER_PAGE + 1}</strong> a{' '}
+                  <strong style={{ color: '#475569' }}>{Math.min(page * ITEMS_PER_PAGE, list.length)}</strong> de{' '}
+                  <strong style={{ color: '#475569' }}>{list.length}</strong> tarifas
+                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                  <NavArrow icon="chevron_left" disabled={page === 1} onClick={() => setPage(p => p - 1)} />
+                  {visiblePages.map((p, i) => p === '...'
+                    ? <span key={`d${i}`} style={{ padding: '0 6px', color: '#94a3b8', fontSize: '13px' }}>...</span>
+                    : <PagBtn key={p} label={String(p)} active={p === page} onClick={() => setPage(p as number)} />
+                  )}
+                  <NavArrow icon="chevron_right" disabled={page === totalPages} onClick={() => setPage(p => p + 1)} />
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {!selectedRutaId && (
+        <div style={{ background: 'white', borderRadius: '10px', border: '1px solid #e8edf2', padding: '60px 24px', textAlign: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+          <span className="material-symbols-outlined" style={{ fontSize: '40px', color: '#cbd5e1', display: 'block', marginBottom: '12px' }}>payments</span>
+          <p style={{ fontSize: '14px', color: '#94a3b8', fontWeight: 500 }}>Selecciona una ruta para ver y configurar sus tarifas</p>
+        </div>
+      )}
+    </Layout>
+  );
+};
