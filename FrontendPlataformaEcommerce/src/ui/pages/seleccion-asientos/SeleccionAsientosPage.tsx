@@ -128,6 +128,7 @@ export function SeleccionAsientosPage() {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [iniciandoPago, setIniciandoPago] = useState(false);
 
   const [puntosResueltos, setPuntosResueltos] = useState<{ idPuntoOrigen: number | null; idPuntoDestino: number | null }>({
     idPuntoOrigen: null,
@@ -227,37 +228,53 @@ export function SeleccionAsientosPage() {
         let idPuntoOrigen = state.idPuntoOrigen;
         let idPuntoDestino = state.idPuntoDestino;
 
+        // Disparar detalle, tramo y asientos TODO EN PARALELO
+        const detallePromise = httpClient.get<{ data: DetalleViaje }>(`/plataforma-ecommerce/viaje/${state.idviaje}/detalle`);
+
+        const asientosPromise = httpClient.get<{ data: AsientosResponse & { idPuntoOrigen?: number; idPuntoDestino?: number } }>(
+          `/plataforma-ecommerce/viaje/${state.idviaje}/asientos`,
+          {
+            params: {
+              idPuntoOrigen: idPuntoOrigen ?? 0,
+              idPuntoDestino: idPuntoDestino ?? 0,
+              origen: state.origen,
+              destino: state.destino
+            }
+          }
+        );
+
+        let tramoPromise: Promise<any> | null = null;
         if ((!idPuntoOrigen || !idPuntoDestino) && state.origen && state.destino) {
-          try {
-            const puntosRes = await httpClient.get<{ data: { idpuntoorigen: number; idpuntodestino: number } }>(
-              `/plataforma-ecommerce/viaje/${state.idviaje}/resolver-tramo`,
-              { params: { origen: state.origen, destino: state.destino } }
-            );
-            idPuntoOrigen = puntosRes.data.data.idpuntoorigen;
-            idPuntoDestino = puntosRes.data.data.idpuntodestino;
-          } catch { /* si falla, continuar sin puntos */ }
+          tramoPromise = httpClient.get<{ data: { idpuntoorigen: number; idpuntodestino: number } }>(
+            `/plataforma-ecommerce/viaje/${state.idviaje}/resolver-tramo`,
+            { params: { origen: state.origen, destino: state.destino } }
+          ).catch(() => null);
         }
 
-        const [detalleRes, asientosRes] = await Promise.all([
-          httpClient.get<{ data: DetalleViaje }>(`/plataforma-ecommerce/viaje/${state.idviaje}/detalle`),
-          httpClient.get<{ data: AsientosResponse }>(
-            `/plataforma-ecommerce/viaje/${state.idviaje}/asientos`,
-            { params: { idPuntoOrigen: idPuntoOrigen ?? 0, idPuntoDestino: idPuntoDestino ?? 0 } }
-          )
+        const [detalleRes, asientosRes, tramoRes] = await Promise.all([
+          detallePromise,
+          asientosPromise,
+          tramoPromise ? tramoPromise : Promise.resolve(null)
         ]);
 
         const detalleData = detalleRes.data.data;
-        if (!idPuntoOrigen && detalleData.idPuntoOrigen) {
-          idPuntoOrigen = detalleData.idPuntoOrigen;
-        }
-        if (!idPuntoDestino && detalleData.idPuntoDestino) {
-          idPuntoDestino = detalleData.idPuntoDestino;
+        const asientosData = asientosRes.data.data;
+
+        if (tramoRes?.data?.data?.idpuntoorigen && tramoRes?.data?.data?.idpuntodestino) {
+          idPuntoOrigen = tramoRes.data.data.idpuntoorigen;
+          idPuntoDestino = tramoRes.data.data.idpuntodestino;
+        } else if (asientosData?.idPuntoOrigen && asientosData?.idPuntoDestino) {
+          idPuntoOrigen = asientosData.idPuntoOrigen;
+          idPuntoDestino = asientosData.idPuntoDestino;
+        } else {
+          idPuntoOrigen = idPuntoOrigen || detalleData.idPuntoOrigen || null;
+          idPuntoDestino = idPuntoDestino || detalleData.idPuntoDestino || null;
         }
 
         setPuntosResueltos({ idPuntoOrigen, idPuntoDestino });
         setDetalle(detalleData);
-        setAsientos(asientosRes.data.data.asientos);
-        setTiempoMaxMin(asientosRes.data.data.tiempoMaxReservaMin);
+        setAsientos(asientosData.asientos);
+        setTiempoMaxMin(asientosData.tiempoMaxReservaMin);
       } catch {
         setError('No se pudo cargar la información del viaje. Intenta de nuevo.');
       } finally {
@@ -659,61 +676,75 @@ export function SeleccionAsientosPage() {
     setErroresPasajeros(nuevosErrores);
     if (hayErrores) return;
 
-    const puntos = await resolverPuntosOError();
-    if (!puntos) return;
-
-    // Bug 1 fix: si el usuario marcó "Yo soy este pasajero" completar el perfil
-    // directamente con esos datos ANTES de iniciar el pago, para evitar que
-    // useWompiPago muestre FormularioCompletarPerfil con los mismos campos otra vez.
-    if (usarMisDatosIdx !== null) {
-      const p = pasajeros[usarMisDatosIdx];
-      try {
-        await wompiApi.completarPerfil({
-          nombre: p.nombrePasajero,
-          apellido: p.apellidoPasajero,
-          tipoDocumento: p.tipoDocumento,
-          documento: p.documento,
-          telefono: p.telefono,
-        });
-        // Actualizar localStorage para que useWompiPago encuentre el perfil COMPLETO
-        const usuarioGuardado = localStorage.getItem('usuario');
-        if (usuarioGuardado) {
-          const usuario = JSON.parse(usuarioGuardado);
-          localStorage.setItem('usuario', JSON.stringify({
-            ...usuario,
-            nombre: p.nombrePasajero,
-            apellido: p.apellidoPasajero,
-            tipoDocumento: p.tipoDocumento,
-            documento: p.documento,
-            telefono: p.telefono,
-            estadousuario: 'COMPLETO',
-          }));
-        }
-      } catch (err: any) {
-        const msg = err?.response?.data?.message ?? 'Error al guardar los datos del perfil. Intenta de nuevo.';
-        setErrorMsg(msg);
-        return; // no continuar al pago
+    setIniciandoPago(true);
+    try {
+      const puntos = await resolverPuntosOError();
+      if (!puntos) {
+        setIniciandoPago(false);
+        return;
       }
+
+      // Si el perfil ya está completo en localStorage, no hacemos la llamada de red a completarPerfil
+      if (usarMisDatosIdx !== null) {
+        const p = pasajeros[usarMisDatosIdx];
+        const usuarioGuardado = localStorage.getItem('usuario');
+        let esCompleto = false;
+        if (usuarioGuardado) {
+          try {
+            const u = JSON.parse(usuarioGuardado);
+            esCompleto = u.estadousuario === 'COMPLETO' && !!u.documento;
+          } catch {}
+        }
+
+        if (!esCompleto) {
+          try {
+            await wompiApi.completarPerfil({
+              nombre: p.nombrePasajero,
+              apellido: p.apellidoPasajero,
+              tipoDocumento: p.tipoDocumento,
+              documento: p.documento,
+              telefono: p.telefono,
+            });
+            if (usuarioGuardado) {
+              const usuario = JSON.parse(usuarioGuardado);
+              localStorage.setItem('usuario', JSON.stringify({
+                ...usuario,
+                nombre: p.nombrePasajero,
+                apellido: p.apellidoPasajero,
+                tipoDocumento: p.tipoDocumento,
+                documento: p.documento,
+                telefono: p.telefono,
+                estadousuario: 'COMPLETO',
+              }));
+            }
+          } catch (err: any) {
+            const msg = err?.response?.data?.message ?? 'Error al guardar los datos del perfil. Intenta de nuevo.';
+            setErrorMsg(msg);
+            setIniciandoPago(false);
+            return; // no continuar al pago
+          }
+        }
+      }
+
+      // Construir payload para Wompi
+      const asientosDTO: AsientoTransaccionDTO[] = asientosSeleccionados.map((asiento, idx) => ({
+        idAsientoViaje: asiento.idasientoviaje,
+        idPuntoOrigen: puntos.idPuntoOrigen,
+        idPuntoDestino: puntos.idPuntoDestino,
+        monto: asiento.precio,
+        esComprador: idx === 0,
+        nombrePasajero: pasajeros[idx].nombrePasajero,
+        apellidoPasajero: pasajeros[idx].apellidoPasajero,
+        tipoDocumento: pasajeros[idx].tipoDocumento,
+        documento: pasajeros[idx].documento,
+        telefono: pasajeros[idx].telefono || undefined,
+        correoPasajero: pasajeros[idx].correoPasajero || undefined,
+      }));
+
+      await iniciarPago(state!.idviaje, asientosDTO);
+    } finally {
+      setIniciandoPago(false);
     }
-
-    // Construir payload para Wompi
-    const asientosDTO: AsientoTransaccionDTO[] = asientosSeleccionados.map((asiento, idx) => ({
-      idAsientoViaje: asiento.idasientoviaje,
-      idPuntoOrigen: puntos.idPuntoOrigen,
-      idPuntoDestino: puntos.idPuntoDestino,
-      monto: asiento.precio,
-      esComprador: idx === 0,
-      nombrePasajero: pasajeros[idx].nombrePasajero,
-      apellidoPasajero: pasajeros[idx].apellidoPasajero,
-      tipoDocumento: pasajeros[idx].tipoDocumento,
-      documento: pasajeros[idx].documento,
-      telefono: pasajeros[idx].telefono || undefined,
-      correoPasajero: pasajeros[idx].correoPasajero || undefined,
-    }));
-
-    iniciarPago(state!.idviaje, asientosDTO);
-    // Nota: asientosReservadosRef.current se limpia en el useEffect de fase === 'widget'
-    // para garantizar que solo se borra cuando el widget ya está activo (pago en curso).
   };
 
   const handleAplicarCupon = async (codigoOpcional?: string) => {
@@ -1382,10 +1413,10 @@ export function SeleccionAsientosPage() {
                     ) : (
                       <button
                         onClick={handleConfirmarYPagar}
-                        disabled={!formularioValido() || fase === 'verificando' || fase === 'preparando'}
+                        disabled={!formularioValido() || iniciandoPago || fase === 'verificando' || fase === 'preparando'}
                         className="w-full flex items-center justify-center gap-2 bg-[#0e3a8c] text-white px-6 py-4 rounded-2xl font-bold text-sm hover:bg-blue-900 transition-all shadow-lg shadow-blue-900/20 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                       >
-                        {(fase === 'verificando' || fase === 'preparando') ? (
+                        {(iniciandoPago || fase === 'verificando' || fase === 'preparando') ? (
                           <>
                             <span className="material-symbols-outlined text-base animate-spin">progress_activity</span>
                             {s.procesando}

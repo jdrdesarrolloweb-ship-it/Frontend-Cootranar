@@ -50,20 +50,37 @@ export async function abrirODescargarPdf(
     if (isIOS) {
       // En iOS Safari, la navegación directa nunca es bloqueada y lanza el lector nativo de PDF
       window.location.href = url;
-    } else if (nuevaPestana && !nuevaPestana.closed) {
-      nuevaPestana.location.href = url;
     } else {
-      // Fallback si el navegador bloqueó la ventana inicial
-      const a = document.createElement('a');
-      a.href = url;
-      a.target = '_blank';
-      a.rel = 'noopener noreferrer';
-      if (nombreArchivo) {
-        a.download = nombreArchivo;
+      let pestanaAbierta = false;
+      try {
+        if (nuevaPestana && !nuevaPestana.closed) {
+          nuevaPestana.location.href = url;
+          pestanaAbierta = true;
+        }
+      } catch {
+        pestanaAbierta = false;
+        try {
+          if (nuevaPestana && !nuevaPestana.closed) nuevaPestana.close();
+        } catch { /* ignore */ }
       }
-      document.body.appendChild(a);
-      a.click();
-      setTimeout(() => a.remove(), 100);
+
+      if (!pestanaAbierta) {
+        // Fallback robusto con enlace directo o navegación
+        try {
+          const a = document.createElement('a');
+          a.href = url;
+          a.target = '_blank';
+          a.rel = 'noopener noreferrer';
+          if (nombreArchivo) {
+            a.download = nombreArchivo;
+          }
+          document.body.appendChild(a);
+          a.click();
+          setTimeout(() => a.remove(), 100);
+        } catch {
+          window.location.href = url;
+        }
+      }
     }
   } catch (error) {
     if (nuevaPestana && !nuevaPestana.closed) {

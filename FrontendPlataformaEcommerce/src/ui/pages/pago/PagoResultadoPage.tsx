@@ -58,10 +58,23 @@ export function PagoResultadoPage() {
     setErrorDescarga(null);
     try {
       await abrirODescargarPdf(async () => {
-        const res = await httpClient.get<{ success: boolean; signedUrl: string }>(
-          `/wompi/tiquetes/${idTiquete}/pdf`
-        );
-        return res.data.signedUrl;
+        let signedUrl: string | undefined;
+        // Reintentar hasta 3 veces si el webhook aún está subiendo el archivo
+        for (let r = 0; r < 3; r++) {
+          try {
+            const res = await httpClient.get<any>(`/wompi/tiquetes/${idTiquete}/pdf`);
+            signedUrl = res.data?.signedUrl || res.data?.data?.signedUrl || res.data?.url || res.data?.data?.url;
+            if (signedUrl) break;
+          } catch (fetchErr: any) {
+            if (r < 2 && (fetchErr?.response?.status === 404 || !fetchErr?.response)) {
+              await new Promise((res) => setTimeout(res, 1200));
+              continue;
+            }
+            throw fetchErr;
+          }
+        }
+        if (!signedUrl) throw new Error('No se recibió la URL de descarga del PDF');
+        return signedUrl;
       }, `tiquete-${codigoTiquete || idTiquete}.pdf`);
     } catch {
       setErrorDescarga('No se pudo generar el enlace de descarga. Intenta de nuevo.');
@@ -77,11 +90,10 @@ export function PagoResultadoPage() {
       const urls: { url: string; codigo: string }[] = [];
       for (const t of tiquetes) {
         try {
-          const res = await httpClient.get<{ success: boolean; signedUrl: string }>(
-            `/wompi/tiquetes/${t.idTiquete}/pdf`
-          );
-          if (res.data.success && res.data.signedUrl) {
-            urls.push({ url: res.data.signedUrl, codigo: t.codigoTiquete });
+          const res = await httpClient.get<any>(`/wompi/tiquetes/${t.idTiquete}/pdf`);
+          const url = res.data?.signedUrl || res.data?.data?.signedUrl || res.data?.url || res.data?.data?.url;
+          if (url) {
+            urls.push({ url, codigo: t.codigoTiquete });
           }
         } catch { /* continuar */ }
       }

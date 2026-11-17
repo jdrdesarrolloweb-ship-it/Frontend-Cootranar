@@ -50,15 +50,30 @@ function setCache(key: string, data: CacheEntry['data']): void {
 
 
 export function useViajesHome(filtros: ViajesQuery = {}) {
-  const [state, setState] = useState<ViajesHomeState>({
-    viajesHoy: [],
-    viajesProgramados: [],
-    totalHoy: 0,
-    totalProgramados: 0,
-    paginaActual: 1,
-    totalPaginas: 1,
-    loading: true,
-    error: null,
+  const [state, setState] = useState<ViajesHomeState>(() => {
+    const cached = getFromCache(getCacheKey(filtros));
+    if (cached) {
+      return {
+        viajesHoy: cached.viajesHoy,
+        viajesProgramados: cached.viajesProgramados,
+        totalHoy: cached.totalHoy,
+        totalProgramados: cached.totalProgramados,
+        paginaActual: cached.paginacion.paginaActual,
+        totalPaginas: cached.paginacion.totalPaginas,
+        loading: false,
+        error: null,
+      };
+    }
+    return {
+      viajesHoy: [],
+      viajesProgramados: [],
+      totalHoy: 0,
+      totalProgramados: 0,
+      paginaActual: 1,
+      totalPaginas: 1,
+      loading: true,
+      error: null,
+    };
   });
 
 

@@ -32,17 +32,30 @@ export function useWompiPago(): UseWompiPagoReturn {
     setParamsPendientes(payload);
 
     try {
-      const { estadousuario } = await wompiApi.obtenerEstadoCliente();
-
-      if (estadousuario === 'INACTIVO') {
-        setError({ mensaje: 'Debes verificar tu correo electrónico antes de realizar un pago.', codigo: 'CORREO_NO_VERIFICADO' });
-        setFase('error');
-        return;
+      const usuarioRaw = localStorage.getItem('usuario');
+      let esCompletoLocal = false;
+      if (usuarioRaw) {
+        try {
+          const u = JSON.parse(usuarioRaw);
+          if (u.estadousuario === 'COMPLETO') {
+            esCompletoLocal = true;
+          }
+        } catch { /* ignore */ }
       }
 
-      if (estadousuario === 'INCOMPLETO') {
-        setFase('formulario');
-        return;
+      if (!esCompletoLocal) {
+        const { estadousuario } = await wompiApi.obtenerEstadoCliente();
+
+        if (estadousuario === 'INACTIVO') {
+          setError({ mensaje: 'Debes verificar tu correo electrónico antes de realizar un pago.', codigo: 'CORREO_NO_VERIFICADO' });
+          setFase('error');
+          return;
+        }
+
+        if (estadousuario === 'INCOMPLETO') {
+          setFase('formulario');
+          return;
+        }
       }
 
       await _prepararYMostrarWidget(payload);

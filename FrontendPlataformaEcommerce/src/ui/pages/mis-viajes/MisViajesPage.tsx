@@ -68,12 +68,11 @@ export function MisViajesPage() {
 
   const viajesFiltrados = viajes.filter(v => {
     const termino = normalize(codigoBusqueda.trim());
-    const coincideTexto = !termino ||
-      normalize(v.codigotiquete ?? '').includes(termino) ||
-      normalize(v.origennombre ?? '').includes(termino) ||
-      normalize(v.destinonombre ?? '').includes(termino) ||
-      normalize(v.tipobus ?? '').includes(termino) ||
-      normalize(v.placa ?? '').includes(termino);
+    const palabras = termino.split(/\s+/).filter(Boolean);
+    const textoCompleto = normalize(
+      `${v.codigotiquete ?? ''} ${v.origennombre ?? ''} ${v.destinonombre ?? ''} ${v.tipobus ?? ''} ${v.placa ?? ''} ${v.numeromovil ?? ''} ${v.referencia ?? ''}`
+    );
+    const coincideTexto = palabras.length === 0 || palabras.every(p => textoCompleto.includes(p));
 
     const coincideFecha = !fechaBusqueda ||
       formatFecha(v.fechasalida, idioma).toLowerCase().includes(fechaBusqueda.toLowerCase());
@@ -86,10 +85,15 @@ export function MisViajesPage() {
     setDescargando(viaje.idtiquete);
     try {
       await abrirODescargarPdf(async () => {
-        const res = await httpClient.get<{ success: boolean; signedUrl: string }>(
-          `/wompi/tiquetes/${viaje.idtiquete}/pdf`
-        );
-        return res.data.signedUrl;
+        try {
+          const res = await httpClient.get<any>(`/wompi/tiquetes/${viaje.idtiquete}/pdf`);
+          const url = res.data?.signedUrl || res.data?.data?.signedUrl || res.data?.url || res.data?.data?.url;
+          if (url) return url;
+        } catch (fetchErr) {
+          console.warn('[MisViajes] No se pudo obtener URL firmada por endpoint Wompi, usando url directa:', fetchErr);
+        }
+        if (viaje.urlpdf) return viaje.urlpdf;
+        throw new Error('No se pudo generar el enlace de descarga');
       }, `tiquete-${viaje.codigotiquete || viaje.idtiquete}.pdf`);
     } catch {
       alert(idioma === 'es' ? 'No se pudo generar el enlace de descarga. Intenta de nuevo.' : 'Could not generate download link. Please try again.');
@@ -140,12 +144,14 @@ export function MisViajesPage() {
         <div className="bg-white dark:bg-slate-800 rounded-[2rem] border border-slate-100 dark:border-slate-700 px-6 py-5 mb-12 shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-colors">
           <div className="flex flex-col sm:flex-row gap-4 items-end">
             <div className="flex-1 min-w-0 w-full">
-              <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-2 tracking-wide">{m.codigoTiquete}</label>
+              <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-2 tracking-wide">
+                {idioma === 'es' ? 'Ciudad, Destino o Tiquete' : 'City, Destination or Ticket'}
+              </label>
               <div className="flex items-center gap-2 border border-slate-200/60 dark:border-slate-700 rounded-full px-4 py-2.5 bg-[#f0f4fd]/60 dark:bg-slate-900/40">
                 <span className="material-symbols-outlined text-slate-400 dark:text-slate-500 text-lg">search</span>
                 <input
                   type="text"
-                  placeholder={idioma === 'es' ? 'Ej. Popayán, Cali o Código' : 'e.g. Popayán, Cali or Code'}
+                  placeholder={idioma === 'es' ? 'Ej. Popayán, Cali, Pasto o Código' : 'e.g. Popayán, Cali, Pasto or Code'}
                   value={codigoBusqueda}
                   onChange={e => setCodigoBusqueda(e.target.value)}
                   className="flex-1 text-sm font-medium outline-none text-slate-700 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 bg-transparent min-w-0"
