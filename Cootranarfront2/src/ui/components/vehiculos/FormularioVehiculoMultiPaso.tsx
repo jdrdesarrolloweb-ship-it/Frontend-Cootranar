@@ -1628,13 +1628,15 @@ export default function FormularioVehiculoMultiPaso({ onVehiculoCreado, onCancel
       borderRadius: '12px',
       boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
       border: '1px solid #f1f5f9',
-      overflow: 'hidden',
+      overflow: 'visible',
     }}>
       {/* Header con título y paso actual */}
       <div style={{
         padding: '20px 32px',
         borderBottom: '1px solid #f1f5f9',
         backgroundColor: 'white',
+        borderTopLeftRadius: '12px',
+        borderTopRightRadius: '12px',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -1759,6 +1761,8 @@ export default function FormularioVehiculoMultiPaso({ onVehiculoCreado, onCancel
         padding: '12px clamp(12px, 3vw, 28px)',
         borderTop: '1px solid #f1f5f9',
         backgroundColor: 'white',
+        borderBottomLeftRadius: '12px',
+        borderBottomRightRadius: '12px',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
