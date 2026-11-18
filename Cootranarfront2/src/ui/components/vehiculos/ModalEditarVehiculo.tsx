@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { vehiculosApi, propietariosApi, tiposBusApi, tiposServicioApi, aseguradorasApi, archivosApi } from '../../../infrastructure/services/vehiculosApi';
 import { conductoresApi } from '../../../infrastructure/services/conductoresApi';
 import DisenadorAsientos from './DisenadorAsientos';
@@ -319,8 +320,8 @@ export default function ModalEditarVehiculo({ vehiculo, onCerrar, onActualizado 
 
   if (!vehiculo) return null;
 
-  return (
-    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+  return createPortal(
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
       <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200">
 
         {/* Modal Header */}
@@ -1055,6 +1056,7 @@ export default function ModalEditarVehiculo({ vehiculo, onCerrar, onActualizado 
         </div>
 
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

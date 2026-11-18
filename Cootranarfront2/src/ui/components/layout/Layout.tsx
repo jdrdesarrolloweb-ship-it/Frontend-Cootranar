@@ -46,7 +46,7 @@ export const Layout = ({ children, hideHeader, isLoading = false }: LayoutProps)
       }}
     >
       {/* Fondo interactivo SonarGrid */}
-      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden="true">
+      <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden" aria-hidden="true">
         <SonarGrid
           className="w-full h-full cursor-default"
           color={isDark ? 'rgba(96, 165, 250, 0.4)' : 'rgba(13, 59, 142, 0.25)'}
@@ -64,7 +64,7 @@ export const Layout = ({ children, hideHeader, isLoading = false }: LayoutProps)
       <Sidebar isLoading={isLoading} />
       {/* Main content area - scrollable */}
       <div
-        className="flex-1 flex flex-col overflow-hidden relative z-10"
+        className="flex-1 flex flex-col overflow-hidden relative"
         style={{
           marginLeft: `${ml}px`,
           width: isMobile ? '100%' : 'auto',

@@ -1,5 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useQuery } from '@tanstack/react-query';
 import { create } from 'zustand';
 import { almacenApi, type Bodega, type Id, type Producto } from '../../../infrastructure/services/almacenApi';
@@ -231,9 +232,9 @@ export function Modal({ titulo, onClose, children, ancho = 720 }: { titulo: stri
     document.addEventListener('keydown', esc);
     return () => document.removeEventListener('keydown', esc);
   }, [onClose]);
-  return (
+  return createPortal(
     <div role="dialog" aria-modal="true" aria-label={titulo} onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
-      style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.45)', zIndex: 1000, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '5vh 16px', overflowY: 'auto' }}>
+      style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.45)', zIndex: 9999, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '5vh 16px', overflowY: 'auto' }}>
       <div style={{ background: 'white', borderRadius: 12, width: '100%', maxWidth: ancho, boxShadow: '0 25px 60px rgba(0,0,0,0.25)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 20px', borderBottom: '1px solid #f1f5f9' }}>
           <span style={{ fontWeight: 800, fontSize: 15, color: '#0f172a' }}>{titulo}</span>
@@ -243,7 +244,8 @@ export function Modal({ titulo, onClose, children, ancho = 720 }: { titulo: stri
         </div>
         <div style={{ padding: 20 }}>{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

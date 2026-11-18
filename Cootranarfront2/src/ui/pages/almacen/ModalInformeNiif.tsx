@@ -1,4 +1,5 @@
 import React, { useMemo, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useQuery } from '@tanstack/react-query';
 import { almacenApi, type Bodega } from '../../../infrastructure/services/almacenApi';
 import { exportarExcel, money } from './almacenUi';
@@ -84,7 +85,7 @@ export const ModalInformeNiif: React.FC<ModalInformeNiifProps> = ({ idbodega, bo
     window.print();
   };
 
-  return (
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
@@ -93,7 +94,7 @@ export const ModalInformeNiif: React.FC<ModalInformeNiifProps> = ({ idbodega, bo
         inset: 0,
         backgroundColor: 'rgba(15, 23, 42, 0.65)',
         backdropFilter: 'blur(3px)',
-        zIndex: 1100,
+        zIndex: 9999,
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -354,6 +355,7 @@ export const ModalInformeNiif: React.FC<ModalInformeNiifProps> = ({ idbodega, bo
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
