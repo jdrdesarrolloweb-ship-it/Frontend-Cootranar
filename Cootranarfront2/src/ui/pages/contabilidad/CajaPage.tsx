@@ -289,11 +289,23 @@ function ConfigCajas() {
     onSuccess: () => { m.ok('Usuarios autorizados actualizados'); setAsignar(null); qc.invalidateQueries({ queryKey: ['cont', 'caja'] }); },
     onError: (e) => m.err(e),
   });
+  const cajasAlmacenistas = useMutation({
+    mutationFn: () => cont.post<{ total: number }>('/caja/cajas/almacenistas'),
+    onSuccess: (r) => {
+      m.ok(r.total ? `Se crearon ${r.total} caja(s) para almacenistas` : 'Todos los almacenistas ya tienen caja');
+      qc.invalidateQueries({ queryKey: ['cont', 'caja'] });
+    },
+    onError: (e) => m.err(e),
+  });
   return (
     <>
       <Alerta msg={m.msg} onClose={m.cerrar} />
       <Card>
         <CardHeader icon="settings" title="Cajas">
+          <Btn variant="secondary" icon="group_add" disabled={cajasAlmacenistas.isPending} onClick={() => cajasAlmacenistas.mutate()}
+            title="Crea una caja propia (CAJ-<id>) para cada almacenista activo que no tenga caja">
+            {cajasAlmacenistas.isPending ? 'Creando…' : 'Crear cajas para almacenistas'}
+          </Btn>
           <Btn icon="add" onClick={() => setForm({ codigo: '', nombre: '', sede: '', idbodega: null, idcuenta: null, activa: true })}>Nueva caja</Btn>
         </CardHeader>
         <Tabla cargando={cajas.isLoading} filas={cajas.data ?? []} clave={(c: any) => c.idcaja} vacio="Crea la primera caja." columnas={[
