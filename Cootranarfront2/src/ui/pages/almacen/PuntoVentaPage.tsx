@@ -7,6 +7,8 @@ import {
   Alerta, BLUE, BodegaSelector, Btn, Card, Modal, ProductoPicker,
   imprimirRecibo, inputStyle, money, useAlmacen, useMensaje,
 } from './almacenUi';
+import { AperturaCajaPos, TurnoCajaChip } from './CajaTurnoPos';
+import { useTurnoCajaPos } from './useTurnoCajaPos';
 
 interface LineaPOS {
   producto: Producto;
@@ -294,7 +296,9 @@ export const PuntoVentaPage = () => {
 
   // Validación de errores
   const sinStock = lineas.filter((l) => l.cantidad > Number(l.producto.stock ?? 0));
+  const cajaPos = useTurnoCajaPos();
   const errores: string[] = [];
+  if (cajaPos.estado !== 'abierto') errores.push('Debe abrir la caja del día antes de vender');
   if (!lineas.length) errores.push('No hay productos en la venta');
   if (esSocio && !socio) errores.push('Debe seleccionar el socio para la venta');
   if (formapago === 'CREDITO' && !esSocio) errores.push('Las ventas a crédito solo aplican para socios');
@@ -390,6 +394,16 @@ export const PuntoVentaPage = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [cargarDatosF2, limpiar, errores, lineas, vender]);
 
+  // Apertura diaria de caja: sin turno abierto hoy, el POS muestra la apertura en lugar de la venta.
+  if (cajaPos.estado !== 'abierto' || !cajaPos.resumen) {
+    return (
+      <Layout>
+        <AperturaCajaPos estado={cajaPos.estado} resumen={cajaPos.resumen} error={cajaPos.error} />
+      </Layout>
+    );
+  }
+  const turnoCaja = cajaPos.resumen.turno;
+
   return (
     <Layout>
       <Alerta msg={m.msg} onClose={m.cerrar} />
@@ -439,10 +453,12 @@ export const PuntoVentaPage = () => {
                 </span>
               </div>
               <div style={{ fontSize: '11px', color: '#bfdbfe' }}>
-                Terminal: TM-01 · {bodegaActual?.nombre || 'Bodega Principal'}
+                {turnoCaja.codigocaja} · {bodegaActual?.nombre || 'Bodega Principal'}
               </div>
             </div>
           </div>
+
+          <TurnoCajaChip resumen={cajaPos.resumen} />
 
           {/* Botones de función ERP Cootranar (F2, F5 - F8) */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -1246,7 +1262,7 @@ export const PuntoVentaPage = () => {
             textTransform: 'uppercase',
           }}
         >
-          <div>TM: 01 · CAJA PRINCIPAL · {totalItems} {totalItems === 1 ? 'ARTÍCULO' : 'ARTÍCULOS'}</div>
+          <div>{turnoCaja.caja} · TURNO #{turnoCaja.idturno} · {totalItems} {totalItems === 1 ? 'ARTÍCULO' : 'ARTÍCULOS'}</div>
           <div style={{ letterSpacing: '0.06em', color: BLUE }}>COOTRANAR LTDA. — SISTEMA POS DE ALMACÉN</div>
           <div>{new Date().toLocaleDateString('es-CO', { month: 'long', year: 'numeric' }).toUpperCase()}</div>
         </div>
