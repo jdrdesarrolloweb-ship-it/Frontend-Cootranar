@@ -116,7 +116,7 @@ export function VerificarEmailPage() {
               </button>
             )}
             <Link
-              to={ROUTES.LOGIN}
+              to={`${ROUTES.HOME}?auth=login`}
               className="inline-flex w-full items-center justify-center text-slate-700 dark:text-slate-200 font-semibold h-12 rounded-xl border border-slate-300 dark:border-slate-600 transition-all duration-200 hover:bg-slate-100 dark:hover:bg-slate-700"
             >
               Ir a Iniciar Sesión

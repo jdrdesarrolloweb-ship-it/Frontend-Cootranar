@@ -70,8 +70,8 @@ export const PrivateRoute = () => {
   }, [estado]);
 
   if (estado === 'invalida') {
-    // Recordar a dónde iba para volver después de iniciar sesión.
-    return <Navigate to={ROUTES.LOGIN} replace state={{ returnTo: location.pathname + location.search }} />;
+    // Recordar a dónde iba para volver después de iniciar sesión en el modal.
+    return <Navigate to={`${ROUTES.HOME}?auth=login`} replace state={{ returnTo: location.pathname + location.search }} />;
   }
 
   if (estado === 'verificando') {

@@ -32,7 +32,7 @@ export function NuevaPasswordPage() {
     setError('');
     try {
       await restablecerPassword(token, password);
-      navigate(ROUTES.LOGIN);
+      navigate(`${ROUTES.HOME}?auth=login`);
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: { message?: string } } };
       setError(axiosErr.response?.data?.message || 'Error al restablecer la contraseña');

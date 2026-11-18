@@ -98,7 +98,7 @@ httpClient.interceptors.response.use(
         // Había una sesión y el backend la rechazó: expiró o es inválida.
         // Un visitante sin sesión navegando el catálogo público NO se redirige.
         clearSession();
-        window.location.href = '/login';
+        window.location.href = '/home?auth=login';
       }
     }
 

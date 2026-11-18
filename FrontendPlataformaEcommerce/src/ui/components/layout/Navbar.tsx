@@ -24,6 +24,27 @@ export function Navbar() {
   const usuario = getUsuario();
   // Login en modal sobre la página actual (sin navegar a /login).
   const [loginAbierto, setLoginAbierto] = useState(false);
+
+  // Apertura automática del modal por parámetro de URL (?auth=login o ?login=true) o por evento global
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('auth') === 'login' || params.get('login') === 'true') {
+      setLoginAbierto(true);
+      params.delete('auth');
+      params.delete('login');
+      const newSearch = params.toString();
+      navigate(
+        { pathname: location.pathname, search: newSearch ? `?${newSearch}` : '' },
+        { replace: true }
+      );
+    }
+  }, [location.search, location.pathname, navigate]);
+
+  useEffect(() => {
+    const abrir = () => setLoginAbierto(true);
+    window.addEventListener('cootranar:abrir-login', abrir);
+    return () => window.removeEventListener('cootranar:abrir-login', abrir);
+  }, []);
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [quienesSomosAbierto, setQuienesSomosAbierto] = useState(false);
   // Al bajar, el navbar gana sombra para "flotar" sobre el contenido.

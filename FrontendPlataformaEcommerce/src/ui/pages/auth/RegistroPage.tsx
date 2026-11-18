@@ -251,7 +251,7 @@ export function RegistroPage() {
             <span className="material-symbols-outlined text-lg">mail</span>
           </a>
           <div>
-            <Link to={ROUTES.LOGIN} className="inline-flex items-center gap-2 text-slate-500 hover:text-brand-blue text-xs font-bold transition-colors">
+            <Link to={`${ROUTES.HOME}?auth=login`} className="inline-flex items-center gap-2 text-slate-500 hover:text-brand-blue text-xs font-bold transition-colors">
               <span className="material-symbols-outlined text-base">arrow_back</span>
               Volver al Inicio de Sesión
             </Link>
@@ -552,7 +552,7 @@ export function RegistroPage() {
                   {!loading && <span className="material-symbols-outlined text-lg">arrow_forward</span>}
                 </button>
                 <p className="text-center text-slate-500 text-xs mt-2.5">
-                  ¿Ya tienes cuenta? <Link to={ROUTES.LOGIN} className="text-brand-blue font-bold hover:underline">Inicia sesión</Link>
+                  ¿Ya tienes cuenta? <Link to={`${ROUTES.HOME}?auth=login`} className="text-brand-blue font-bold hover:underline">Inicia sesión</Link>
                 </p>
               </div>
             </form>

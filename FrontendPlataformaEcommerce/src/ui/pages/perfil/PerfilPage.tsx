@@ -46,7 +46,7 @@ export function PerfilPage() {
 
   const handleLogout = async () => {
     await logout();
-    navigate(ROUTES.LOGIN);
+    navigate(ROUTES.HOME);
   };
 
   const abrirSelectorFoto = () => {
@@ -177,7 +177,7 @@ export function PerfilPage() {
   };
 
   if (!usuario) {
-    navigate(ROUTES.LOGIN);
+    navigate(`${ROUTES.HOME}?auth=login`);
     return null;
   }
 

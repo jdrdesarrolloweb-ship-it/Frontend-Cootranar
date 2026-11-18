@@ -53,7 +53,7 @@ export function MillasPage() {
   useEffect(() => {
     const user = getUsuario();
     if (!user) {
-      navigate(ROUTES.LOGIN);
+      navigate(`${ROUTES.HOME}?auth=login`);
       return;
     }
 

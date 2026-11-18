@@ -1,6 +1,5 @@
 import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { ScrollToTop } from './ScrollToTop';
-import { LoginPage } from '../pages/auth/LoginPage';
 import { RegistroPage } from '../pages/auth/RegistroPage';
 import { VerificarEmailPage } from '../pages/auth/VerificarEmailPage';
 import { OlvidoPasswordPage } from '../pages/auth/OlvidoPasswordPage';
@@ -31,8 +30,8 @@ export const AppRouter = () => {
     <>
       <ScrollToTop />
       <Routes>
-      {/* Autenticación */}
-      <Route path={ROUTES.LOGIN} element={<LoginPage />} />
+      {/* Autenticación: /login redirige al inicio y abre el modal de login */}
+      <Route path={ROUTES.LOGIN} element={<Navigate to={`${ROUTES.HOME}?auth=login`} replace />} />
       <Route path={ROUTES.REGISTRO} element={<RegistroPage />} />
       <Route path={ROUTES.VERIFICAR_EMAIL} element={<VerificarEmailPage />} />
       <Route path={ROUTES.RECUPERAR_PASSWORD} element={<OlvidoPasswordPage />} />
