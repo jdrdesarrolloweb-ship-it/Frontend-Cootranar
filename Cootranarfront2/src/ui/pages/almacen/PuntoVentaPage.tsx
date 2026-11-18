@@ -1262,7 +1262,7 @@ export const PuntoVentaPage = () => {
             textTransform: 'uppercase',
           }}
         >
-          <div>{turnoCaja.caja} · TURNO #{turnoCaja.idturno} · {totalItems} {totalItems === 1 ? 'ARTÍCULO' : 'ARTÍCULOS'}</div>
+          <div>{turnoCaja.caja} · APERTURA {turnoCaja.codigoapertura} · {totalItems} {totalItems === 1 ? 'ARTÍCULO' : 'ARTÍCULOS'}</div>
           <div style={{ letterSpacing: '0.06em', color: BLUE }}>COOTRANAR LTDA. — SISTEMA POS DE ALMACÉN</div>
           <div>{new Date().toLocaleDateString('es-CO', { month: 'long', year: 'numeric' }).toUpperCase()}</div>
         </div>

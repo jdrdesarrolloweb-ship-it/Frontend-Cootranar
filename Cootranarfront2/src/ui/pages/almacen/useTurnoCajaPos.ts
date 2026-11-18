@@ -4,6 +4,7 @@ import { cont } from '../../../infrastructure/services/contabilidadApi';
 
 export interface TurnoCaja {
   idturno: number;
+  codigoapertura: string;
   caja: string;
   codigocaja: string;
   fechaapertura: string;

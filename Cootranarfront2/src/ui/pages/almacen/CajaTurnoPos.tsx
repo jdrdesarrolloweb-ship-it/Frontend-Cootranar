@@ -18,13 +18,13 @@ export function TurnoCajaChip({ resumen }: { resumen: ResumenTurno }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
       <div style={{ fontSize: '11px', color: '#bfdbfe', lineHeight: 1.35 }}>
-        <div style={{ color: '#ffffff', fontWeight: 800 }}>{t.caja} · Turno #{t.idturno}</div>
+        <div style={{ color: '#ffffff', fontWeight: 800 }}>{t.caja} · Apertura {t.codigoapertura}</div>
         <div>Abierto {horaBogota(t.fechaapertura)} · {resumen.numeroVentas} venta(s) · {money(resumen.totalVentas)}</div>
       </div>
       <button
         type="button"
         onClick={() => navigate(ROUTES.CAJA)}
-        title="Arqueo y cierre del turno (reporte Z)"
+        title="Cierre de la apertura y cuadre de lo que ingresó"
         style={{
           background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.35)', color: '#ffffff',
           padding: '5px 10px', borderRadius: 6, fontSize: '12px', fontWeight: 800, cursor: 'pointer',
@@ -42,7 +42,7 @@ export function TurnoCajaChip({ resumen }: { resumen: ResumenTurno }) {
 export function AperturaCajaPos({ estado, resumen, error }: { estado: EstadoCajaPos; resumen: ResumenTurno | null; error: unknown }) {
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const [form, setForm] = useState({ idcaja: '', fondoinicial: '', observacion: '' });
+  const [form, setForm] = useState({ idcaja: '', observacion: '' });
   const [errorAbrir, setErrorAbrir] = useState<string | null>(null);
 
   const cajas = useQuery({
@@ -50,11 +50,15 @@ export function AperturaCajaPos({ estado, resumen, error }: { estado: EstadoCaja
     queryFn: () => cont.get<{ idcaja: number; nombre: string; sede?: string; ocupada: boolean }[]>('/caja/mis-cajas'),
     enabled: estado === 'sin-turno',
   });
+  const lista = cajas.data ?? [];
+  // Si el empleado solo tiene su caja propia, queda elegida de una vez.
+  const libres = lista.filter((c) => !c.ocupada);
+  const idcajaElegida = form.idcaja || (libres.length === 1 ? String(libres[0].idcaja) : '');
 
   const abrir = useMutation({
+    // La apertura arranca en cero; solo genera el código AP-… de referencia.
     mutationFn: () => cont.post('/caja/turnos', {
-      idcaja: Number(form.idcaja),
-      fondoinicial: Number(form.fondoinicial || 0),
+      idcaja: Number(idcajaElegida),
       observacion: form.observacion || undefined,
     }),
     onSuccess: () => { setErrorAbrir(null); qc.invalidateQueries({ queryKey: ['cont', 'caja'] }); },
@@ -85,23 +89,22 @@ export function AperturaCajaPos({ estado, resumen, error }: { estado: EstadoCaja
 
   if (estado === 'vencido' && resumen) {
     const t = resumen.turno;
-    return contenedor('lock_clock', 'Hay un turno de un día anterior', (
+    return contenedor('lock_clock', 'Hay una apertura de un día anterior', (
       <>
         <p style={{ fontSize: 13, color: '#334155', lineHeight: 1.55, marginTop: 0 }}>
-          El turno <b>#{t.idturno}</b> de <b>{t.caja}</b> se abrió el {horaBogota(t.fechaapertura)} y sigue abierto.
-          La caja se abre y se cierra cada día: haga el arqueo y cierre ese turno, y luego abra uno nuevo para vender hoy.
+          La apertura <b>{t.codigoapertura}</b> de <b>{t.caja}</b> se abrió el {horaBogota(t.fechaapertura)} y sigue abierta.
+          La caja se abre y se cierra cada día: ciérrela con el cuadre y luego abra una nueva para vender hoy.
         </p>
-        <Btn icon="lock" variant="danger" onClick={() => navigate(ROUTES.CAJA)}>Ir a cerrar el turno #{t.idturno}</Btn>
+        <Btn icon="lock" variant="danger" onClick={() => navigate(ROUTES.CAJA)}>Ir a cerrar {t.codigoapertura}</Btn>
       </>
     ));
   }
 
-  const lista = cajas.data ?? [];
   return contenedor('lock_open', 'Abrir caja del día', (
     <>
       <p style={{ fontSize: 13, color: '#475569', lineHeight: 1.55, marginTop: 0 }}>
-        Para vender en el punto de venta abra un turno de caja. Las ventas de contado quedan en ese turno y al final
-        del día se cierra con el arqueo y el reporte Z.
+        Al abrir se genera un código de apertura (AP-…) que arranca en cero. Las ventas quedan en esa apertura y al
+        cerrar se hace el cuadre de cuánto dinero ingresó.
       </p>
       {cajas.isLoading ? (
         <p style={{ fontSize: 13, color: '#94a3b8' }}>Cargando cajas…</p>
@@ -114,7 +117,7 @@ export function AperturaCajaPos({ estado, resumen, error }: { estado: EstadoCaja
           <label style={{ fontSize: 12, fontWeight: 700, color: '#475569' }}>
             Caja
             <select
-              value={form.idcaja}
+              value={idcajaElegida}
               onChange={(e) => setForm({ ...form, idcaja: e.target.value })}
               style={{ ...inputStyle, width: '100%', marginTop: 4 }}
             >
@@ -127,15 +130,6 @@ export function AperturaCajaPos({ estado, resumen, error }: { estado: EstadoCaja
             </select>
           </label>
           <label style={{ fontSize: 12, fontWeight: 700, color: '#475569' }}>
-            Fondo inicial (base en efectivo)
-            <input
-              type="number" min={0} step="any" placeholder="0"
-              value={form.fondoinicial}
-              onChange={(e) => setForm({ ...form, fondoinicial: e.target.value })}
-              style={{ ...inputStyle, width: '100%', marginTop: 4 }}
-            />
-          </label>
-          <label style={{ fontSize: 12, fontWeight: 700, color: '#475569' }}>
             Observación
             <input
               maxLength={300}
@@ -146,7 +140,7 @@ export function AperturaCajaPos({ estado, resumen, error }: { estado: EstadoCaja
           </label>
           {errorAbrir && <p style={{ fontSize: 13, color: '#b91c1c', margin: 0 }}>{errorAbrir}</p>}
           <div>
-            <Btn icon="lock_open" disabled={!form.idcaja || abrir.isPending} onClick={() => abrir.mutate()}>
+            <Btn icon="lock_open" disabled={!idcajaElegida || abrir.isPending} onClick={() => abrir.mutate()}>
               {abrir.isPending ? 'Abriendo…' : 'Abrir caja'}
             </Btn>
           </div>
