@@ -141,11 +141,23 @@ export const BusesSemillaPage = () => {
       .catch(() => setBusesReales([]));
   }, [esAdmin]);
 
-  // Solo puede haber una semilla activa por tipo de bus + capacidad.
-  const combinacionesConSemilla = useMemo(
-    () => new Set(semillas.map((s) => `${s.idtipobus}-${s.capacidad}`)),
+  // Solo puede haber una semilla activa por capacidad.
+  const capacidadesConSemilla = useMemo(
+    () => new Set(semillas.map((s) => s.capacidad)),
     [semillas]
   );
+  // Una opción por capacidad: el primer bus real (por número de móvil) sirve de plantilla.
+  const plantillasPorCapacidad = useMemo(() => {
+    const porCapacidad = new Map<number, { plantilla: BusPlantilla; cantidad: number }>();
+    busesReales
+      .toSorted((a, b) => (a.capacidad ?? 0) - (b.capacidad ?? 0) || String(a.numeromovil).localeCompare(String(b.numeromovil)))
+      .forEach((b) => {
+        const actual = porCapacidad.get(b.capacidad);
+        if (actual) actual.cantidad += 1;
+        else porCapacidad.set(b.capacidad, { plantilla: b, cantidad: 1 });
+      });
+    return [...porCapacidad.values()];
+  }, [busesReales]);
   useEffect(() => { void cargarViajes(); }, [cargarViajes]);
 
   const handleCrear = async (e: React.FormEvent) => {
@@ -190,7 +202,7 @@ export const BusesSemillaPage = () => {
         <span className="material-symbols-outlined" style={{ fontSize: '28px', color: BLUE }}>airport_shuttle</span>
         <div style={{ fontSize: '13px', color: '#334155', lineHeight: 1.55 }}>
           <div style={{ fontWeight: 700, fontSize: '15px', color: '#0f172a', marginBottom: '4px' }}>Buses semilla</div>
-          Un bus semilla es un bus genérico por tipo de bus y capacidad (24, 30, 42 puestos…) con su documentación al día.
+          Un bus semilla es un bus genérico por capacidad (24, 30, 42 puestos…) con su documentación al día.
           Sirve para programar y vender viajes a futuro sin comprometer aún un bus real, y se puede usar en varios viajes
           (incluso a la misma hora). Para programar un viaje con él, elíjalo en <em>Viajes</em> (p. ej. <strong>S42A</strong>). El día del viaje, traslade los asientos vendidos al bus real
           desde la tabla de abajo: el sistema valida pólizas, SOAT, tecnomecánica y conductor del bus real.
@@ -210,16 +222,15 @@ export const BusesSemillaPage = () => {
                 style={{ ...input, width: '300px', cursor: 'pointer' }}
               >
                 <option value="">Elegir bus plantilla…</option>
-                {busesReales
-                  .toSorted((a: BusPlantilla, b: BusPlantilla) => (a.capacidad ?? 0) - (b.capacidad ?? 0) || String(a.numeromovil).localeCompare(String(b.numeromovil)))
-                  .map((b) => {
-                    const yaTiene = combinacionesConSemilla.has(`${b.idtipobus}-${b.capacidad}`);
-                    return (
-                      <option key={b.idvehiculo} value={b.idvehiculo} disabled={yaTiene}>
-                        {b.capacidad} puestos · móvil {b.numeromovil} · {b.nombretipobus ?? 'Bus'}{yaTiene ? ' (ya hay semilla)' : ''}
-                      </option>
-                    );
-                  })}
+                {plantillasPorCapacidad.map(({ plantilla: b, cantidad }) => {
+                  const yaTiene = capacidadesConSemilla.has(b.capacidad);
+                  return (
+                    <option key={b.capacidad} value={b.idvehiculo} disabled={yaTiene}>
+                      {b.capacidad} puestos · {b.nombretipobus ?? 'Bus'} · plantilla móvil {b.numeromovil}
+                      {cantidad > 1 ? ` (${cantidad} buses)` : ''}{yaTiene ? ' (ya hay semilla)' : ''}
+                    </option>
+                  );
+                })}
               </select>
               <button type="submit" disabled={creando} style={boton('primario', creando)}>
                 <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>add</span>
@@ -230,7 +241,7 @@ export const BusesSemillaPage = () => {
         </div>
         {esAdmin && (
           <p style={{ margin: '0 0 12px', fontSize: '12px', color: '#64748b' }}>
-            La semilla copia el tipo de bus, el tipo de servicio y la distribución de asientos del bus plantilla. Solo puede haber una por tipo de bus y capacidad, y sirve para todos los viajes que necesite.
+            La semilla copia el tipo de bus, el tipo de servicio y la distribución de asientos del bus plantilla. Solo puede haber una por capacidad, y sirve para todos los viajes que necesite.
           </p>
         )}
 
