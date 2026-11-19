@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import taquillaApiService, { type SaldoMillasPasajero } from '../../../infrastructure/services/taquillaApi';
 
 const BLUE = '#1a56db';
 
@@ -23,7 +24,11 @@ interface AsientoVenta {
 interface ResumenVentaProps {
   viaje: any;
   asientos: AsientoVenta[];
-  onConfirmar: (metodoPago: number, formaPago: 'CONTADO' | 'CREDITO') => void;
+  onConfirmar: (
+    metodoPago: number,
+    formaPago: 'CONTADO' | 'CREDITO',
+    opciones?: { idUsuarioPagadorMillas?: number }
+  ) => void;
   onVolver: () => void;
   onAnular?: () => void;
   onEditar?: () => void;
@@ -81,6 +86,40 @@ export const ResumenVenta: React.FC<ResumenVentaProps> = ({
   }, [metodosPago]);
 
   const total = asientos.reduce((s, a) => s + Number(a.precio), 0);
+
+  // ── Pago con millas: verificar saldo del pasajero que paga ──
+  const metodoSel = metodosPago.find(m => m.idmetodopago === metodoPago);
+  const esMillas = /milla/i.test(metodoSel?.nombre || '');
+  const pagadores = asientos.filter(a => a.pasajero.idusuario);
+  const [idPagador, setIdPagador] = useState<number | undefined>(undefined);
+  const [saldo, setSaldo] = useState<SaldoMillasPasajero | null>(null);
+  const [cargandoSaldo, setCargandoSaldo] = useState(false);
+  const [errorSaldo, setErrorSaldo] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!idPagador && pagadores.length > 0) setIdPagador(pagadores[0].pasajero.idusuario);
+  }, [pagadores, idPagador]);
+
+  useEffect(() => {
+    if (!esMillas || !idPagador) return;
+    let vigente = true;
+    setCargandoSaldo(true);
+    setErrorSaldo(null);
+    setSaldo(null);
+    taquillaApiService.consultarMillasPasajero(idPagador)
+      .then(d => { if (vigente) setSaldo(d); })
+      .catch((e: any) => { if (vigente) setErrorSaldo(e?.response?.data?.message || 'No se pudo consultar el saldo de millas.'); })
+      .finally(() => { if (vigente) setCargandoSaldo(false); });
+    return () => { vigente = false; };
+  }, [esMillas, idPagador]);
+
+  const valorMilla = saldo?.valorMillaCop || 10;
+  const millasRequeridas = Math.ceil(total / valorMilla);
+  const millasSuficientes = !!saldo && saldo.programaActivo && saldo.saldoMillas >= millasRequeridas;
+  const bloqueoMillas = esMillas && (cargandoSaldo || !millasSuficientes || formaPago === 'CREDITO' || !idPagador);
+  const nombrePagador = pagadores.find(a => a.pasajero.idusuario === idPagador)?.pasajero;
+  const puedeEmitir = !cargando && !!metodoPago && !bloqueoMillas;
+
   const tasasTerminal = Math.round(total * 0.02);
   const tarifaBase = total - tasasTerminal;
   const iva = 0;
@@ -249,6 +288,86 @@ export const ResumenVenta: React.FC<ResumenVentaProps> = ({
                 );
               })}
             </div>
+
+            {/* Cuadro de saldo de millas */}
+            {esMillas && (
+              <div style={{ padding: '0 18px 16px' }}>
+                <div style={{
+                  borderRadius: 10, padding: '14px 16px',
+                  border: `1px solid ${cargandoSaldo || errorSaldo || !saldo ? '#e5e7eb' : millasSuficientes ? '#bbf7d0' : '#fecaca'}`,
+                  background: cargandoSaldo || errorSaldo || !saldo ? '#f9fafb' : millasSuficientes ? '#f0fdf4' : '#fef2f2',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 10 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span className="material-symbols-outlined" style={{ fontSize: 18, color: BLUE }}>stars</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: '#111827' }}>Saldo de millas</span>
+                    </div>
+                    {pagadores.length > 1 ? (
+                      <select
+                        value={idPagador ?? ''}
+                        onChange={e => setIdPagador(Number(e.target.value))}
+                        style={{ fontSize: 12, padding: '4px 8px', borderRadius: 6, border: '1px solid #d1d5db' }}
+                        aria-label="Pasajero que paga con millas"
+                      >
+                        {pagadores.map(a => (
+                          <option key={a.pasajero.idusuario} value={a.pasajero.idusuario}>
+                            Paga: {a.pasajero.nombre} {a.pasajero.apellido}
+                          </option>
+                        ))}
+                      </select>
+                    ) : nombrePagador && (
+                      <span style={{ fontSize: 12, color: '#6b7280' }}>Paga: {nombrePagador.nombre} {nombrePagador.apellido}</span>
+                    )}
+                  </div>
+
+                  {!idPagador ? (
+                    <p style={{ margin: 0, fontSize: 12, color: '#b91c1c' }}>El pasajero no tiene cuenta registrada; no puede pagar con millas.</p>
+                  ) : cargandoSaldo ? (
+                    <p style={{ margin: 0, fontSize: 12, color: '#6b7280' }}>Consultando saldo...</p>
+                  ) : errorSaldo ? (
+                    <p style={{ margin: 0, fontSize: 12, color: '#b91c1c' }}>{errorSaldo}</p>
+                  ) : saldo && (
+                    <>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+                        <div>
+                          <div style={s.label}>Disponibles</div>
+                          <div style={{ fontSize: 18, fontWeight: 800, color: '#111827' }}>{saldo.saldoMillas.toLocaleString('es-CO')}</div>
+                        </div>
+                        <div>
+                          <div style={s.label}>Requeridas</div>
+                          <div style={{ fontSize: 18, fontWeight: 800, color: '#111827' }}>{millasRequeridas.toLocaleString('es-CO')}</div>
+                          <div style={{ fontSize: 11, color: '#6b7280' }}>1 milla = ${valorMilla.toLocaleString('es-CO')}</div>
+                        </div>
+                        <div>
+                          <div style={s.label}>{millasSuficientes ? 'Quedarían' : 'Faltan'}</div>
+                          <div style={{ fontSize: 18, fontWeight: 800, color: millasSuficientes ? '#15803d' : '#b91c1c' }}>
+                            {Math.abs(saldo.saldoMillas - millasRequeridas).toLocaleString('es-CO')}
+                          </div>
+                        </div>
+                      </div>
+                      <p style={{ margin: '10px 0 0', fontSize: 12, fontWeight: 700, color: millasSuficientes ? '#15803d' : '#b91c1c', display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span className="material-symbols-outlined" style={{ fontSize: 16 }}>{millasSuficientes ? 'check_circle' : 'error'}</span>
+                        {!saldo.programaActivo
+                          ? 'El programa de millas no está activo.'
+                          : millasSuficientes
+                            ? 'El pasajero tiene millas suficientes para pagar este viaje.'
+                            : 'Millas insuficientes para pagar este viaje. Elige otro método de pago.'}
+                      </p>
+                      {saldo.millasPendientes > 0 && (
+                        <p style={{ margin: '6px 0 0', fontSize: 11, color: '#6b7280' }}>
+                          +{saldo.millasPendientes.toLocaleString('es-CO')} millas pendientes de viajes aún no realizados (no se pueden usar todavía).
+                        </p>
+                      )}
+                      {formaPago === 'CREDITO' && (
+                        <p style={{ margin: '6px 0 0', fontSize: 12, fontWeight: 700, color: '#b91c1c' }}>
+                          El pago con millas solo puede ser de contado.
+                        </p>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Footer actions */}
@@ -333,15 +452,16 @@ export const ResumenVenta: React.FC<ResumenVentaProps> = ({
 
             <button
               type="button"
-              onClick={() => onConfirmar(metodoPago, formaPago)}
-              disabled={cargando || !metodoPago}
+              onClick={() => onConfirmar(metodoPago, formaPago, esMillas ? { idUsuarioPagadorMillas: idPagador } : undefined)}
+              disabled={!puedeEmitir}
+              title={bloqueoMillas ? 'Verifica el saldo de millas del pasajero' : undefined}
               style={{
                 width: '100%', padding: '14px 0', borderRadius: 10, border: '2px solid rgba(255,255,255,0.4)',
                 background: 'rgba(255,255,255,0.15)', color: '#fff',
                 fontSize: 14, fontWeight: 800, letterSpacing: 0.5, textTransform: 'uppercase',
-                cursor: cargando || !metodoPago ? 'not-allowed' : 'pointer',
+                cursor: puedeEmitir ? 'pointer' : 'not-allowed',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                opacity: cargando || !metodoPago ? 0.6 : 1,
+                opacity: puedeEmitir ? 1 : 0.6,
                 backdropFilter: 'blur(4px)',
                 transition: 'all 0.2s',
               }}

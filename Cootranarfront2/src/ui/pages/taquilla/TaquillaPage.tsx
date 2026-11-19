@@ -510,7 +510,11 @@ export const TaquillaPage = () => {
   };
 
   // ── Paso 8 ────────────────────────────────────────────────────────────────
-  const handleConfirmarVenta = async (metodoPago: number, formaPago: 'CONTADO' | 'CREDITO') => {
+  const handleConfirmarVenta = async (
+    metodoPago: number,
+    formaPago: 'CONTADO' | 'CREDITO',
+    opciones?: { idUsuarioPagadorMillas?: number }
+  ) => {
     try {
       const asientosVenta = asientosConDatos.map(a => ({
         idAsientoViaje: a.idasientoviaje,
@@ -519,7 +523,13 @@ export const TaquillaPage = () => {
         idPuntoDestino: a.puntoDestino?.idpuntoruta || puntoDestinoFinal,
         valorCobrado: a.precio || 50000,
       }));
-      const res = await confirmarVenta.mutateAsync({ idViaje: viajeSeleccionado.idviaje, idMetodoPago: metodoPago, formaPago, asientos: asientosVenta });
+      const res = await confirmarVenta.mutateAsync({
+        idViaje: viajeSeleccionado.idviaje,
+        idMetodoPago: metodoPago,
+        formaPago,
+        asientos: asientosVenta,
+        ...(opciones?.idUsuarioPagadorMillas ? { idUsuarioPagadorMillas: opciones.idUsuarioPagadorMillas } : {}),
+      });
       setTiquetesGenerados(res.data?.tiquetes || res.data?.data?.tiquetes || []);
       setPasoActual('completado');
     } catch (err: any) {

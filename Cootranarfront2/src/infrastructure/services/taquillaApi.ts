@@ -31,6 +31,17 @@ export interface ConfirmarVentaData {
   idMetodoPago: number;
   formaPago: 'CONTADO' | 'CREDITO';
   asientos: AsientoVenta[];
+  /** Solo con método "Millas Cootranar": pasajero cuyas millas pagan la venta. */
+  idUsuarioPagadorMillas?: number;
+}
+
+export interface SaldoMillasPasajero {
+  idUsuario: number;
+  saldoMillas: number;
+  millasPendientes: number;
+  valorMillaCop: number;
+  programaActivo: boolean;
+  nivel: string | null;
 }
 
 export interface CancelarOperacionData {
@@ -123,6 +134,14 @@ export const taquillaApiService = {
     return httpClient.post<{ success: boolean; message: string; data: any }>(
       `/taquilla/tiquetes/${idTiquete}/liberar-inasistencia`
     );
+  },
+
+  /** Saldo de millas de un pasajero (para vender con el método "Millas Cootranar"). */
+  consultarMillasPasajero: async (idUsuario: number): Promise<SaldoMillasPasajero> => {
+    const res = await httpClient.get<{ success: boolean; data: SaldoMillasPasajero }>(
+      `/taquilla/pasajeros/${idUsuario}/millas`
+    );
+    return res.data.data;
   },
 
   /** Registra que el pasajero abordó; el backend acredita sus millas en ese momento. */
