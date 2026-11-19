@@ -112,14 +112,12 @@ export function MapaAsientosGestionTiquetes({
 
   const [pisoActual, setPisoActual] = useState<number>(1);
 
-  // Si cambia el viaje, volver al primer piso disponible
   useEffect(() => {
     if (!pisos.includes(pisoActual)) {
       setPisoActual(pisos[0] ?? 1);
     }
   }, [pisos, pisoActual]);
 
-  // Si hay búsqueda activa y el resultado está en otro piso, cambiar automáticamente a ese piso
   useEffect(() => {
     if (!hayBusquedaActiva || tiquetesResaltadosIds.size === 0) return;
     const primeroResaltado = tiquetes.find((t) => tiquetesResaltadosIds.has(t.idtiquete));
@@ -136,7 +134,6 @@ export function MapaAsientosGestionTiquetes({
     }
   }, [hayBusquedaActiva, tiquetesResaltadosIds, tiquetes, asientos, pisos, pisoActual]);
 
-  // Mapa rápido por numeroasiento -> Tiquete (y por idasientoviaje -> Tiquete)
   const tiquetePorAsiento = useMemo(() => {
     const mapNum = new Map<number, TiqueteEnAsiento>();
     const mapId = new Map<number, TiqueteEnAsiento>();
@@ -159,7 +156,6 @@ export function MapaAsientosGestionTiquetes({
       if (delPiso.length > 0) {
         return { distribucion: delPiso, columnas: base.columnas };
       }
-      // Si la distribución no trae campo piso, armar cuadrícula con los asientos de este piso
       const nums = asientosDelPiso.map((a) => Number(a.numeroasiento)).sort((a, b) => a - b);
       const slots: SlotDistribucion[] = [];
       let slotId = 1;
@@ -178,20 +174,31 @@ export function MapaAsientosGestionTiquetes({
 
   if (cargando) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-slate-500">
-        <span className="material-symbols-outlined text-4xl text-[#0e3a8c] animate-spin mb-2">
+      <div style={{ padding: '48px 16px', textAlign: 'center', color: '#64748b' }}>
+        <span className="material-symbols-outlined animate-spin" style={{ fontSize: '36px', color: '#0e3a8c', display: 'block', marginBottom: '8px' }}>
           progress_activity
         </span>
-        <p className="text-sm font-semibold">Cargando mapa de asientos del bus...</p>
+        <p style={{ fontSize: '13px', fontWeight: 600 }}>Cargando mapa de asientos del bus...</p>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col items-center">
-      {/* Selector de Piso (solo si el bus tiene 2 pisos) */}
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      {/* Selector de Piso */}
       {pisos.length > 1 && (
-        <div className="flex items-center gap-2 mb-4 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            marginBottom: '16px',
+            padding: '4px',
+            borderRadius: '12px',
+            background: isDark ? '#1e293b' : '#f1f5f9',
+            border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`,
+          }}
+        >
           {pisos.map((piso) => {
             const activo = piso === pisoActual;
             const tieneCoincidenciaEnPiso =
@@ -206,16 +213,24 @@ export function MapaAsientosGestionTiquetes({
                 key={piso}
                 type="button"
                 onClick={() => setPisoActual(piso)}
-                className={`relative px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                  activo
-                    ? 'bg-[#0e3a8c] text-white shadow-sm'
-                    : 'text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700'
-                }`}
+                style={{
+                  padding: '7px 16px',
+                  borderRadius: '9px',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  border: 'none',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  background: activo ? '#0e3a8c' : 'transparent',
+                  color: activo ? '#ffffff' : isDark ? '#cbd5e1' : '#475569',
+                }}
               >
-                <span className="material-symbols-outlined text-sm">layers</span>
+                <span className="material-symbols-outlined" style={{ fontSize: '15px' }}>layers</span>
                 <span>Piso {piso}</span>
                 {tieneCoincidenciaEnPiso && (
-                  <span className="w-2 h-2 rounded-full bg-[#c62828] animate-ping" />
+                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#c62828', display: 'inline-block' }} />
                 )}
               </button>
             );
@@ -224,76 +239,119 @@ export function MapaAsientosGestionTiquetes({
       )}
 
       {/* Leyenda de estados */}
-      <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 mb-5 text-[11px] font-semibold text-slate-600 dark:text-slate-300">
-        <span className="flex items-center gap-1.5">
-          <span className="w-3.5 h-3.5 rounded bg-white border border-slate-300 inline-block" />
+      <div
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '14px',
+          marginBottom: '18px',
+          fontSize: '11.5px',
+          fontWeight: 600,
+          color: isDark ? '#cbd5e1' : '#475569',
+        }}
+      >
+        <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <span style={{ width: '14px', height: '14px', borderRadius: '4px', background: '#ffffff', border: '1.5px solid #cbd5e1', display: 'inline-block' }} />
           Libre
         </span>
-        <span className="flex items-center gap-1.5">
-          <span className="w-3.5 h-3.5 rounded bg-[#0e3a8c] inline-block" />
-          Ocupado (Pendiente)
+        <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <span style={{ width: '14px', height: '14px', borderRadius: '4px', background: '#0e3a8c', display: 'inline-block' }} />
+          Ocupado
         </span>
-        <span className="flex items-center gap-1.5">
-          <span className="w-3.5 h-3.5 rounded bg-emerald-600 inline-block" />
+        <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <span style={{ width: '14px', height: '14px', borderRadius: '4px', background: '#16a34a', display: 'inline-block' }} />
           Validado
         </span>
-        <span className="flex items-center gap-1.5">
-          <span className="w-3.5 h-3.5 rounded bg-[#c62828] ring-2 ring-red-300 inline-block" />
+        <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <span style={{ width: '14px', height: '14px', borderRadius: '4px', background: '#c62828', boxShadow: '0 0 0 2px #fca5a5', display: 'inline-block' }} />
           Cliente buscado
         </span>
       </div>
 
       {/* Carrocería del Bus */}
       <div
-        className={`w-full max-w-[340px] rounded-[28px] border-2 p-4 shadow-inner transition-colors ${
-          isDark
-            ? 'bg-slate-900/70 border-slate-700'
-            : 'bg-slate-50/90 border-slate-300'
-        }`}
+        style={{
+          width: '100%',
+          maxWidth: '330px',
+          borderRadius: '26px',
+          border: `2px solid ${isDark ? '#334155' : '#cbd5e1'}`,
+          background: isDark ? '#0f172a' : '#f8fafc',
+          padding: '16px',
+        }}
       >
         {/* Cabina del conductor */}
         <div
-          className={`flex items-center justify-between px-3 py-2 mb-4 rounded-2xl border ${
-            isDark
-              ? 'bg-slate-800 border-slate-700 text-slate-300'
-              : 'bg-white border-slate-200 text-slate-600'
-          }`}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '9px 14px',
+            marginBottom: '14px',
+            borderRadius: '14px',
+            background: isDark ? '#1e293b' : '#ffffff',
+            border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`,
+          }}
         >
-          <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider">
-            <span className="material-symbols-outlined text-base text-[#0e3a8c]">sports_motorsports</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: isDark ? '#cbd5e1' : '#475569' }}>
+            <span className="material-symbols-outlined" style={{ fontSize: '16px', color: '#0e3a8c' }}>sports_motorsports</span>
             <span>Conductor</span>
           </div>
-          <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300">
+          <span
+            style={{
+              fontSize: '10px',
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+              padding: '3px 9px',
+              borderRadius: '999px',
+              background: isDark ? '#334155' : '#f1f5f9',
+              color: isDark ? '#cbd5e1' : '#64748b',
+            }}
+          >
             Frente · Piso {pisoActual}
           </span>
         </div>
 
         {/* Cuadrícula de asientos */}
         <div
-          className="grid gap-2"
-          style={{ gridTemplateColumns: `repeat(${columnas}, minmax(0, 1fr))` }}
+          style={{
+            display: 'grid',
+            gap: '8px',
+            gridTemplateColumns: `repeat(${columnas}, minmax(0, 1fr))`,
+          }}
         >
           {distribucion.map((slot) => {
             if (slot.esBano) {
               return (
                 <div
                   key={slot.id}
-                  className="h-11 rounded-xl bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800 flex flex-col items-center justify-center text-sky-600 dark:text-sky-400"
+                  style={{
+                    height: '44px',
+                    borderRadius: '11px',
+                    background: isDark ? '#0c4a6e' : '#f0f9ff',
+                    border: `1px solid ${isDark ? '#0369a1' : '#bae6fd'}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#0284c7',
+                  }}
                   title="Baño"
                 >
-                  <span className="material-symbols-outlined text-base">wc</span>
+                  <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>wc</span>
                 </div>
               );
             }
 
             if (slot.esPasillo || slot.vacio || slot.numero == null) {
-              return <div key={slot.id} className="h-11" />;
+              return <div key={slot.id} style={{ height: '44px' }} />;
             }
 
             const numAsiento = Number(slot.numero);
-            const asientoBD = asientos.find(
-              (a) => Number(a.numeroasiento) === numAsiento && Number(a.piso ?? 1) === pisoActual
-            ) || asientos.find((a) => Number(a.numeroasiento) === numAsiento);
+            const asientoBD =
+              asientos.find((a) => Number(a.numeroasiento) === numAsiento && Number(a.piso ?? 1) === pisoActual) ||
+              asientos.find((a) => Number(a.numeroasiento) === numAsiento);
 
             const tiquete =
               (asientoBD && tiquetePorAsiento.mapId.get(Number(asientoBD.idasientoviaje))) ||
@@ -306,18 +364,26 @@ export function MapaAsientosGestionTiquetes({
             const atenuado = Boolean(hayBusquedaActiva && tiquetesResaltadosIds.size > 0 && !resaltado);
             const esPoltrona = Boolean(asientoBD?.espoltrona ?? slot.esPoltrona ?? tiquete?.espoltrona);
 
-            let estiloAsiento =
-              'bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 cursor-default';
+            let bg = isDark ? '#1e293b' : '#ffffff';
+            let border = isDark ? '#475569' : '#cbd5e1';
+            let color = isDark ? '#94a3b8' : '#64748b';
+            let shadow = 'none';
 
             if (resaltado) {
-              estiloAsiento =
-                'bg-[#c62828] border-red-700 text-white ring-4 ring-red-400/60 scale-105 shadow-lg shadow-red-600/35 cursor-pointer z-10';
+              bg = '#c62828';
+              border = '#991b1b';
+              color = '#ffffff';
+              shadow = '0 0 0 4px rgba(248, 113, 113, 0.55), 0 6px 14px rgba(198, 40, 40, 0.35)';
             } else if (ocupado && validado) {
-              estiloAsiento =
-                'bg-emerald-600 hover:bg-emerald-700 border-emerald-700 text-white shadow-sm cursor-pointer';
+              bg = '#16a34a';
+              border = '#15803d';
+              color = '#ffffff';
+              shadow = '0 2px 6px rgba(22, 163, 74, 0.25)';
             } else if (ocupado) {
-              estiloAsiento =
-                'bg-[#0e3a8c] hover:bg-[#092966] border-[#092966] text-white shadow-sm cursor-pointer';
+              bg = '#0e3a8c';
+              border = '#092966';
+              color = '#ffffff';
+              shadow = '0 2px 6px rgba(14, 58, 140, 0.25)';
             }
 
             const tooltip = tiquete
@@ -333,18 +399,56 @@ export function MapaAsientosGestionTiquetes({
                   if (tiquete) onClickAsientoOcupado(tiquete);
                 }}
                 title={tooltip}
-                className={`relative h-11 rounded-xl border-2 flex flex-col items-center justify-center transition-all duration-200 ${estiloAsiento} ${
-                  atenuado ? 'opacity-35' : 'opacity-100'
-                }`}
+                style={{
+                  position: 'relative',
+                  height: '44px',
+                  borderRadius: '11px',
+                  border: `2px solid ${border}`,
+                  background: bg,
+                  color,
+                  boxShadow: shadow,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: ocupado ? 'pointer' : 'default',
+                  opacity: atenuado ? 0.35 : 1,
+                  transform: resaltado ? 'scale(1.07)' : 'scale(1)',
+                  transition: 'all 0.18s ease',
+                  zIndex: resaltado ? 10 : 1,
+                }}
               >
                 {resaltado && (
-                  <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center shadow animate-bounce">
-                    <span className="material-symbols-outlined text-[11px] font-black">person</span>
+                  <span
+                    style={{
+                      position: 'absolute',
+                      top: '-6px',
+                      right: '-6px',
+                      width: '18px',
+                      height: '18px',
+                      borderRadius: '50%',
+                      background: '#facc15',
+                      color: '#0f172a',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.25)',
+                    }}
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: '12px', fontWeight: 900 }}>person</span>
                   </span>
                 )}
-                <span className="text-xs font-extrabold leading-none">{numAsiento}</span>
+                <span style={{ fontSize: '12.5px', fontWeight: 800, lineHeight: 1 }}>{numAsiento}</span>
                 {esPoltrona && (
-                  <span className={`text-[8px] font-bold uppercase tracking-tight mt-0.5 ${ocupado || resaltado ? 'text-white/85' : 'text-amber-600'}`}>
+                  <span
+                    style={{
+                      fontSize: '8px',
+                      fontWeight: 700,
+                      textTransform: 'uppercase',
+                      marginTop: '2px',
+                      color: ocupado || resaltado ? 'rgba(255,255,255,0.85)' : '#d97706',
+                    }}
+                  >
                     VIP
                   </span>
                 )}
@@ -354,8 +458,15 @@ export function MapaAsientosGestionTiquetes({
         </div>
 
         {/* Parte trasera */}
-        <div className="mt-4 pt-2 border-t border-dashed border-slate-300 dark:border-slate-700 text-center">
-          <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+        <div
+          style={{
+            marginTop: '14px',
+            paddingTop: '8px',
+            borderTop: `1px dashed ${isDark ? '#334155' : '#cbd5e1'}`,
+            textAlign: 'center',
+          }}
+        >
+          <span style={{ fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#94a3b8' }}>
             Parte trasera del bus
           </span>
         </div>

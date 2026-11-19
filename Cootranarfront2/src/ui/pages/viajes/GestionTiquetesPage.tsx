@@ -69,7 +69,7 @@ interface Tiquete extends TiqueteEnAsiento {
   fechaultimareprogramacion?: string | null;
 }
 
-// ── Modal de Detalle del Cliente y Tiquete (Portal limpio sobre toda la UI) ───
+// ── Modal de Detalle del Cliente y Tiquete ────────────────────────────────────
 function ModalDetalleCliente({
   tiquete,
   viaje,
@@ -102,42 +102,107 @@ function ModalDetalleCliente({
 
   const modal = (
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs"
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 9999,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '16px',
+        background: 'rgba(15, 23, 42, 0.58)',
+        backdropFilter: 'blur(4px)',
+      }}
       onClick={onClose}
       role="dialog"
       aria-modal="true"
     >
       <div
-        className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+        style={{
+          width: '100%',
+          maxWidth: '520px',
+          background: '#ffffff',
+          borderRadius: '18px',
+          border: '1px solid #e2e8f0',
+          boxShadow: '0 24px 48px rgba(15, 23, 42, 0.25)',
+          overflow: 'hidden',
+        }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Franja superior corporativa */}
-        <div className="h-1.5 w-full bg-gradient-to-r from-[#0e3a8c] via-[#1d4ed8] to-[#c62828]" />
+        <div
+          style={{
+            height: '6px',
+            width: '100%',
+            background: 'linear-gradient(90deg, #0e3a8c 0%, #1d4ed8 55%, #c62828 100%)',
+          }}
+        />
 
         {/* Header */}
-        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-start justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-[#0e3a8c] text-white flex flex-col items-center justify-center shrink-0 shadow-sm">
-              <span className="text-[9px] font-bold uppercase tracking-wider opacity-80 leading-none">Silla</span>
-              <span className="text-lg font-black leading-tight">{tiquete.numeroasiento}</span>
+        <div
+          style={{
+            padding: '18px 24px',
+            borderBottom: '1px solid #e2e8f0',
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'space-between',
+            gap: '12px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <div
+              style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '14px',
+                background: '#0e3a8c',
+                color: '#ffffff',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <span style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', opacity: 0.85, lineHeight: 1 }}>
+                Silla
+              </span>
+              <span style={{ fontSize: '18px', fontWeight: 900, lineHeight: 1.15 }}>
+                {tiquete.numeroasiento}
+              </span>
             </div>
+
             <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="text-base font-extrabold text-slate-900 dark:text-white leading-tight">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#0f172a', margin: 0 }}>
                   {tiquete.codigotiquete || `Tiquete #${tiquete.idtiquete}`}
                 </h3>
                 <span
-                  className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wide ${
-                    esValido
-                      ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
-                      : 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
-                  }`}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    padding: '3px 10px',
+                    borderRadius: '999px',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    background: esValido ? '#dcfce7' : '#fef3c7',
+                    color: esValido ? '#166534' : '#92400e',
+                  }}
                 >
-                  <span className={`w-1.5 h-1.5 rounded-full ${esValido ? 'bg-emerald-600' : 'bg-amber-500'}`} />
+                  <span
+                    style={{
+                      width: '6px',
+                      height: '6px',
+                      borderRadius: '50%',
+                      background: esValido ? '#16a34a' : '#f59e0b',
+                    }}
+                  />
                   {esValido ? 'Validado' : 'Pendiente'}
                 </span>
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              <p style={{ fontSize: '12px', color: '#64748b', marginTop: '3px' }}>
                 Piso {tiquete.piso || 1}
                 {tiquete.espoltrona ? ' · Poltrona VIP' : ' · Estándar'}
                 {viaje ? ` · Móvil ${viaje.numeromovil} (${viaje.placa})` : ''}
@@ -148,43 +213,82 @@ function ModalDetalleCliente({
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            style={{
+              width: '32px',
+              height: '32px',
+              borderRadius: '50%',
+              border: 'none',
+              background: '#f1f5f9',
+              color: '#64748b',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+            }}
             aria-label="Cerrar"
           >
-            <span className="material-symbols-outlined text-xl">close</span>
+            <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>close</span>
           </button>
         </div>
 
         {/* Cuerpo */}
-        <div className="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
+        <div style={{ padding: '20px 24px', maxHeight: '68vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {/* Información del Pasajero */}
-          <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 p-4">
-            <p className="text-[10px] font-extrabold uppercase tracking-widest text-[#0e3a8c] dark:text-blue-400 mb-3 flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-sm">person</span>
+          <div
+            style={{
+              borderRadius: '14px',
+              border: '1px solid #e2e8f0',
+              background: '#f8fafc',
+              padding: '16px',
+            }}
+          >
+            <p
+              style={{
+                fontSize: '10.5px',
+                fontWeight: 800,
+                textTransform: 'uppercase',
+                letterSpacing: '0.08em',
+                color: '#0e3a8c',
+                marginBottom: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: '15px' }}>person</span>
               Información del Pasajero
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+
+            <div className="grid grid-cols-1 sm:grid-cols-2" style={{ gap: '12px' }}>
               <div className="sm:col-span-2">
-                <span className="text-[11px] font-semibold text-slate-400 block">Nombre completo</span>
-                <span className="font-bold text-slate-900 dark:text-white uppercase">
+                <span style={{ fontSize: '11px', fontWeight: 600, color: '#94a3b8', display: 'block', marginBottom: '2px' }}>
+                  Nombre completo
+                </span>
+                <span style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a', textTransform: 'uppercase' }}>
                   {`${tiquete.nombre ?? ''} ${tiquete.apellido ?? ''}`.trim() || 'Sin nombre registrado'}
                 </span>
               </div>
               <div>
-                <span className="text-[11px] font-semibold text-slate-400 block">Documento</span>
-                <span className="font-semibold text-slate-800 dark:text-slate-200 font-mono text-xs">
+                <span style={{ fontSize: '11px', fontWeight: 600, color: '#94a3b8', display: 'block', marginBottom: '2px' }}>
+                  Documento
+                </span>
+                <span style={{ fontSize: '13px', fontWeight: 700, color: '#1e293b', fontFamily: 'monospace' }}>
                   {fmtDoc(tiquete.tipodocumento, tiquete.numerodocumento)}
                 </span>
               </div>
               <div>
-                <span className="text-[11px] font-semibold text-slate-400 block">Teléfono</span>
-                <span className="font-semibold text-slate-800 dark:text-slate-200 text-xs">
+                <span style={{ fontSize: '11px', fontWeight: 600, color: '#94a3b8', display: 'block', marginBottom: '2px' }}>
+                  Teléfono
+                </span>
+                <span style={{ fontSize: '13px', fontWeight: 700, color: '#1e293b' }}>
                   {tiquete.telefono || 'No registrado'}
                 </span>
               </div>
               <div className="sm:col-span-2">
-                <span className="text-[11px] font-semibold text-slate-400 block">Correo electrónico</span>
-                <span className="font-semibold text-slate-800 dark:text-slate-200 text-xs break-all">
+                <span style={{ fontSize: '11px', fontWeight: 600, color: '#94a3b8', display: 'block', marginBottom: '2px' }}>
+                  Correo electrónico
+                </span>
+                <span style={{ fontSize: '12.5px', fontWeight: 600, color: '#334155', wordBreak: 'break-all' }}>
                   {tiquete.correo || 'No registrado'}
                 </span>
               </div>
@@ -192,43 +296,77 @@ function ModalDetalleCliente({
           </div>
 
           {/* Información del Tramo y Pago */}
-          <div className="rounded-xl border border-slate-200 dark:border-slate-800 p-4">
-            <p className="text-[10px] font-extrabold uppercase tracking-widest text-[#0e3a8c] dark:text-blue-400 mb-3 flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-sm">confirmation_number</span>
+          <div
+            style={{
+              borderRadius: '14px',
+              border: '1px solid #e2e8f0',
+              background: '#ffffff',
+              padding: '16px',
+            }}
+          >
+            <p
+              style={{
+                fontSize: '10.5px',
+                fontWeight: 800,
+                textTransform: 'uppercase',
+                letterSpacing: '0.08em',
+                color: '#0e3a8c',
+                marginBottom: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: '15px' }}>confirmation_number</span>
               Detalle del Tiquete
             </p>
 
             {/* Tramo visual */}
-            <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/60 px-3.5 py-2.5 rounded-xl border border-slate-200/80 dark:border-slate-700 mb-3">
-              <span className="text-xs font-bold text-slate-800 dark:text-slate-100">
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                background: '#f8fafc',
+                padding: '10px 14px',
+                borderRadius: '12px',
+                border: '1px solid #e2e8f0',
+                marginBottom: '14px',
+              }}
+            >
+              <span style={{ fontSize: '12.5px', fontWeight: 700, color: '#0f172a' }}>
                 {tiquete.origentramo || viaje?.ciudadorigen || 'Origen'}
               </span>
-              <span className="flex-1 border-t-2 border-dashed border-slate-300 dark:border-slate-600 relative mx-1">
-                <span className="material-symbols-outlined text-sm text-[#0e3a8c] dark:text-blue-400 absolute -top-2.5 left-1/2 -translate-x-1/2 bg-slate-50 dark:bg-slate-800 px-1">
-                  arrow_forward
-                </span>
+              <span className="material-symbols-outlined" style={{ fontSize: '16px', color: '#c62828', margin: '0 auto' }}>
+                arrow_forward
               </span>
-              <span className="text-xs font-bold text-slate-800 dark:text-slate-100 text-right">
+              <span style={{ fontSize: '12.5px', fontWeight: 700, color: '#0f172a', textAlign: 'right' }}>
                 {tiquete.destinotramo || viaje?.ciudaddestino || 'Destino'}
               </span>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+            <div className="grid grid-cols-2 sm:grid-cols-3" style={{ gap: '12px' }}>
               <div>
-                <span className="text-[11px] font-semibold text-slate-400 block">Valor pagado</span>
-                <span className="text-base font-black text-[#0e3a8c] dark:text-blue-400">
+                <span style={{ fontSize: '11px', fontWeight: 600, color: '#94a3b8', display: 'block', marginBottom: '2px' }}>
+                  Valor pagado
+                </span>
+                <span style={{ fontSize: '16px', fontWeight: 900, color: '#0e3a8c' }}>
                   {fmtMoneda(tiquete.valorcobrado)}
                 </span>
               </div>
               <div>
-                <span className="text-[11px] font-semibold text-slate-400 block">Forma de pago</span>
-                <span className="font-bold text-slate-700 dark:text-slate-200 uppercase">
+                <span style={{ fontSize: '11px', fontWeight: 600, color: '#94a3b8', display: 'block', marginBottom: '2px' }}>
+                  Forma de pago
+                </span>
+                <span style={{ fontSize: '12.5px', fontWeight: 700, color: '#334155', textTransform: 'uppercase' }}>
                   {tiquete.formapago || 'CONTADO'}
                 </span>
               </div>
               <div>
-                <span className="text-[11px] font-semibold text-slate-400 block">Salida</span>
-                <span className="font-bold text-slate-700 dark:text-slate-200">
+                <span style={{ fontSize: '11px', fontWeight: 600, color: '#94a3b8', display: 'block', marginBottom: '2px' }}>
+                  Hora salida
+                </span>
+                <span style={{ fontSize: '12.5px', fontWeight: 700, color: '#334155' }}>
                   {viaje ? fmtHora(viaje.horasalida) : '—'}
                 </span>
               </div>
@@ -237,15 +375,41 @@ function ModalDetalleCliente({
         </div>
 
         {/* Acciones */}
-        <div className="px-6 py-4 bg-slate-50 dark:bg-slate-800/60 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2.5">
+        <div
+          style={{
+            padding: '16px 24px',
+            background: '#f8fafc',
+            borderTop: '1px solid #e2e8f0',
+            display: 'flex',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '10px',
+          }}
+        >
           <button
             type="button"
             onClick={() => onDescargarPdf(tiquete)}
             disabled={!tiquete.urlpdf || descargando}
-            className="flex-1 min-w-[155px] inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#c62828] hover:bg-[#a61d1d] disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-bold shadow-sm transition-all cursor-pointer"
+            style={{
+              flex: '1 1 170px',
+              padding: '10px 16px',
+              borderRadius: '11px',
+              border: 'none',
+              background: '#c62828',
+              color: '#ffffff',
+              fontSize: '12.5px',
+              fontWeight: 700,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              cursor: !tiquete.urlpdf || descargando ? 'not-allowed' : 'pointer',
+              opacity: !tiquete.urlpdf || descargando ? 0.55 : 1,
+            }}
             title={tiquete.urlpdf ? 'Descargar copia PDF del tiquete' : 'PDF no disponible para este tiquete'}
           >
-            <span className={`material-symbols-outlined text-base ${descargando ? 'animate-spin' : ''}`}>
+            <span className={`material-symbols-outlined ${descargando ? 'animate-spin' : ''}`} style={{ fontSize: '17px' }}>
               {descargando ? 'progress_activity' : 'download'}
             </span>
             <span>{descargando ? 'Generando PDF...' : 'Descargar Tiquete'}</span>
@@ -257,9 +421,22 @@ function ModalDetalleCliente({
               onClose();
               onReprogramar(tiquete);
             }}
-            className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-white dark:bg-slate-800 hover:bg-amber-50 dark:hover:bg-slate-700 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700 text-xs font-bold transition-all cursor-pointer"
+            style={{
+              padding: '10px 16px',
+              borderRadius: '11px',
+              border: '1px solid #f59e0b',
+              background: '#fffbeb',
+              color: '#92400e',
+              fontSize: '12.5px',
+              fontWeight: 700,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              cursor: 'pointer',
+            }}
           >
-            <span className="material-symbols-outlined text-base">event_repeat</span>
+            <span className="material-symbols-outlined" style={{ fontSize: '17px' }}>event_repeat</span>
             <span>Reprogramar</span>
           </button>
 
@@ -268,9 +445,23 @@ function ModalDetalleCliente({
               type="button"
               onClick={() => onValidar(tiquete)}
               disabled={validando}
-              className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#0e3a8c] hover:bg-[#092966] disabled:opacity-60 text-white text-xs font-bold shadow-sm transition-all cursor-pointer"
+              style={{
+                padding: '10px 16px',
+                borderRadius: '11px',
+                border: 'none',
+                background: '#0e3a8c',
+                color: '#ffffff',
+                fontSize: '12.5px',
+                fontWeight: 700,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                cursor: validando ? 'not-allowed' : 'pointer',
+                opacity: validando ? 0.65 : 1,
+              }}
             >
-              <span className="material-symbols-outlined text-base">verified</span>
+              <span className="material-symbols-outlined" style={{ fontSize: '17px' }}>verified</span>
               <span>{validando ? 'Validando...' : 'Validar'}</span>
             </button>
           )}
@@ -284,28 +475,23 @@ function ModalDetalleCliente({
 
 // ── Página Principal: Gestión de Tiquetes (Flujo 2 Pantallas) ─────────────────
 export const GestionTiquetesPage = () => {
-  // Filtros pantalla 1 (Viajes)
   const [origen, setOrigen] = useState('');
   const [destino, setDestino] = useState('');
   const [fecha, setFecha] = useState('');
   const [numeroTiquete, setNumeroTiquete] = useState('');
 
-  // Estado viajes
   const [viajes, setViajes] = useState<ViajeResumen[]>([]);
   const [cargandoViajes, setCargandoViajes] = useState(false);
   const [viajeSeleccionado, setViajeSeleccionado] = useState<ViajeResumen | null>(null);
 
-  // Estado detalle del viaje (tiquetes + asientos del bus)
   const [tiquetes, setTiquetes] = useState<Tiquete[]>([]);
   const [asientosBus, setAsientosBus] = useState<AsientoGestionUI[]>([]);
   const [cargandoDetalle, setCargandoDetalle] = useState(false);
   const [errorDetalle, setErrorDetalle] = useState<string | null>(null);
 
-  // Buscador de cliente dentro del bus (por nombre o cédula)
   const [filtroPasajero, setFiltroPasajero] = useState('');
   const [filtroEstado, setFiltroEstado] = useState<'todos' | 'pendiente' | 'validado'>('todos');
 
-  // Modales y acciones
   const [tiqueteDetalle, setTiqueteDetalle] = useState<Tiquete | null>(null);
   const [tiqueteReprogramar, setTiqueteReprogramar] = useState<Tiquete | null>(null);
   const [validando, setValidando] = useState(false);
@@ -317,7 +503,6 @@ export const GestionTiquetesPage = () => {
     setTimeout(() => setToast(null), 4500);
   }, []);
 
-  // ── Abrir Pantalla 2: Detalle del viaje + mapa de asientos ────────────────
   const handleAbrirDetalleViaje = useCallback(async (viaje: ViajeResumen, busquedaInicial?: string) => {
     setViajeSeleccionado(viaje);
     setFiltroPasajero(busquedaInicial ?? '');
@@ -346,7 +531,6 @@ export const GestionTiquetesPage = () => {
     }
   }, []);
 
-  // ── Buscar viajes (Pantalla 1) ────────────────────────────────────────────
   const handleBuscarViajes = useCallback(
     async (paramsOverride?: { ciudadorigen?: string; ciudaddestino?: string; fecha?: string; numerotiquete?: string }) => {
       setCargandoViajes(true);
@@ -362,7 +546,6 @@ export const GestionTiquetesPage = () => {
         const encontrados: ViajeResumen[] = res.data?.data?.viajes || [];
         setViajes(encontrados);
 
-        // Si se buscó por N° de tiquete y hay 1 viaje, abrir directo el mapa de asientos resaltando el cliente
         if (params.numerotiquete && encontrados.length === 1) {
           handleAbrirDetalleViaje(encontrados[0], params.numerotiquete);
         }
@@ -375,7 +558,6 @@ export const GestionTiquetesPage = () => {
     [origen, destino, fecha, numeroTiquete, handleAbrirDetalleViaje, mostrarToast]
   );
 
-  // Cargar viajes disponibles al montar la página
   useEffect(() => {
     handleBuscarViajes({});
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -389,7 +571,6 @@ export const GestionTiquetesPage = () => {
     handleBuscarViajes({});
   };
 
-  // ── Validar tiquete ───────────────────────────────────────────────────────
   const handleValidar = useCallback(
     async (t: Tiquete) => {
       setValidando(true);
@@ -410,7 +591,6 @@ export const GestionTiquetesPage = () => {
     [mostrarToast]
   );
 
-  // ── Descargar PDF del tiquete ─────────────────────────────────────────────
   const handleDescargarPdf = useCallback(
     async (t: Tiquete) => {
       if (!t.urlpdf) {
@@ -435,7 +615,6 @@ export const GestionTiquetesPage = () => {
     [mostrarToast]
   );
 
-  // ── Reprogramación exitosa ────────────────────────────────────────────────
   const handleReprogramacionExitosa = useCallback(
     (mensaje: string) => {
       setTiqueteReprogramar(null);
@@ -445,7 +624,6 @@ export const GestionTiquetesPage = () => {
     [viajeSeleccionado, filtroPasajero, handleAbrirDetalleViaje, mostrarToast]
   );
 
-  // ── Filtrado y coincidencias en el bus por nombre o cédula ────────────────
   const hayBusquedaPasajero = filtroPasajero.trim().length > 0;
 
   const tiquetesFiltrados = useMemo(() => {
@@ -473,24 +651,54 @@ export const GestionTiquetesPage = () => {
     return new Set(tiquetesFiltrados.map((t) => t.idtiquete));
   }, [hayBusquedaPasajero, tiquetesFiltrados]);
 
-  // ── Estadísticas del viaje abierto ────────────────────────────────────────
   const totalTiquetes = tiquetes.length;
   const totalValidados = tiquetes.filter((t) => t.validado).length;
   const totalPendientes = totalTiquetes - totalValidados;
   const ingresoTotal = tiquetes.reduce((acc, t) => acc + Number(t.valorcobrado || 0), 0);
+
+  const labelStyle: React.CSSProperties = {
+    display: 'block',
+    fontSize: '11px',
+    fontWeight: 700,
+    textTransform: 'uppercase',
+    letterSpacing: '0.06em',
+    color: '#64748b',
+    marginBottom: '6px',
+  };
+
+  const inputBaseStyle: React.CSSProperties = {
+    width: '100%',
+    height: '40px',
+    padding: '0 14px',
+    borderRadius: '10px',
+    border: '1px solid #cbd5e1',
+    background: '#f8fafc',
+    fontSize: '13.5px',
+    color: '#0f172a',
+    outline: 'none',
+    boxSizing: 'border-box',
+  };
 
   return (
     <Layout>
       {/* Toast de retroalimentación */}
       {toast && (
         <div
-          className={`mb-4 px-4 py-3 rounded-xl border flex items-center gap-2.5 text-sm font-bold shadow-xs ${
-            toast.tipo === 'ok'
-              ? 'bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-950/50 dark:border-emerald-800 dark:text-emerald-300'
-              : 'bg-red-50 border-red-200 text-red-800 dark:bg-red-950/50 dark:border-red-800 dark:text-red-300'
-          }`}
+          style={{
+            marginBottom: '16px',
+            padding: '12px 16px',
+            borderRadius: '12px',
+            border: `1px solid ${toast.tipo === 'ok' ? '#86efac' : '#fca5a5'}`,
+            background: toast.tipo === 'ok' ? '#f0fdf4' : '#fef2f2',
+            color: toast.tipo === 'ok' ? '#166534' : '#991b1b',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            fontSize: '13.5px',
+            fontWeight: 700,
+          }}
         >
-          <span className="material-symbols-outlined text-xl">
+          <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>
             {toast.tipo === 'ok' ? 'check_circle' : 'error'}
           </span>
           <span>{toast.texto}</span>
@@ -501,18 +709,45 @@ export const GestionTiquetesPage = () => {
           PANTALLA 1: BUSCADOR DE VIAJES + LISTADO DE VIAJES CON "VER DETALLES"
          ===================================================================== */}
       {!viajeSeleccionado && (
-        <div className="space-y-6">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           {/* Card de Filtros de Búsqueda */}
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 sm:p-6 shadow-xs">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: '16px',
+              border: '1px solid #e2e8f0',
+              padding: '22px 24px',
+              boxShadow: '0 2px 10px rgba(15, 23, 42, 0.04)',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '10px',
+                marginBottom: '16px',
+              }}
+            >
               <div>
-                <h2 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[#0e3a8c] dark:text-blue-400">
+                <h2
+                  style={{
+                    fontSize: '16px',
+                    fontWeight: 800,
+                    color: '#0f172a',
+                    margin: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                  }}
+                >
+                  <span className="material-symbols-outlined" style={{ color: '#0e3a8c', fontSize: '20px' }}>
                     travel_explore
                   </span>
                   Buscar Viajes Programados
                 </h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                <p style={{ fontSize: '12.5px', color: '#64748b', marginTop: '3px' }}>
                   Filtra los viajes por origen, destino, fecha o número de tiquete y entra a ver el mapa de asientos.
                 </p>
               </div>
@@ -520,9 +755,19 @@ export const GestionTiquetesPage = () => {
                 <button
                   type="button"
                   onClick={handleLimpiarFiltros}
-                  className="self-start sm:self-auto text-xs font-bold text-slate-500 hover:text-[#c62828] inline-flex items-center gap-1 cursor-pointer"
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    color: '#c62828',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    cursor: 'pointer',
+                  }}
                 >
-                  <span className="material-symbols-outlined text-sm">filter_alt_off</span>
+                  <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>filter_alt_off</span>
                   Limpiar filtros
                 </button>
               )}
@@ -533,63 +778,78 @@ export const GestionTiquetesPage = () => {
                 e.preventDefault();
                 handleBuscarViajes();
               }}
-              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3.5 items-end"
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 items-end"
+              style={{ gap: '14px' }}
             >
               <div className="lg:col-span-3">
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-                  Ciudad Origen
-                </label>
-                <div className="relative">
-                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg pointer-events-none">
+                <label style={labelStyle}>Ciudad Origen</label>
+                <div style={{ position: 'relative' }}>
+                  <span
+                    className="material-symbols-outlined"
+                    style={{
+                      position: 'absolute',
+                      left: '12px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      color: '#94a3b8',
+                      fontSize: '18px',
+                      pointerEvents: 'none',
+                    }}
+                  >
                     trip_origin
                   </span>
                   <input
                     value={origen}
                     onChange={(e) => setOrigen(e.target.value)}
                     placeholder="Ej: Pasto"
-                    className="w-full h-10 pl-9 pr-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#0e3a8c]/25 focus:border-[#0e3a8c]"
+                    style={{ ...inputBaseStyle, paddingLeft: '38px' }}
                   />
                 </div>
               </div>
 
               <div className="lg:col-span-3">
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-                  Ciudad Destino
-                </label>
-                <div className="relative">
-                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg pointer-events-none">
+                <label style={labelStyle}>Ciudad Destino</label>
+                <div style={{ position: 'relative' }}>
+                  <span
+                    className="material-symbols-outlined"
+                    style={{
+                      position: 'absolute',
+                      left: '12px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      color: '#94a3b8',
+                      fontSize: '18px',
+                      pointerEvents: 'none',
+                    }}
+                  >
                     location_on
                   </span>
                   <input
                     value={destino}
                     onChange={(e) => setDestino(e.target.value)}
                     placeholder="Ej: Medellín"
-                    className="w-full h-10 pl-9 pr-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#0e3a8c]/25 focus:border-[#0e3a8c]"
+                    style={{ ...inputBaseStyle, paddingLeft: '38px' }}
                   />
                 </div>
               </div>
 
               <div className="lg:col-span-2">
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-                  Fecha de Salida
-                </label>
+                <label style={labelStyle}>Fecha de Salida</label>
                 <DatePicker
                   value={fecha}
                   onChange={setFecha}
-                  inputClassName="h-10 text-sm rounded-xl"
+                  inputClassName="h-[40px] text-sm rounded-[10px]"
                   placeholder="Todas"
                 />
               </div>
 
               <div className="lg:col-span-2">
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-                  N° de Tiquete
-                </label>
+                <label style={labelStyle}>N° de Tiquete</label>
                 <input
                   value={numeroTiquete}
                   onChange={(e) => setNumeroTiquete(e.target.value)}
                   placeholder="SETP..."
-                  className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#0e3a8c]/25 focus:border-[#0e3a8c]"
+                  style={inputBaseStyle}
                 />
               </div>
 
@@ -597,9 +857,25 @@ export const GestionTiquetesPage = () => {
                 <button
                   type="submit"
                   disabled={cargandoViajes}
-                  className="w-full h-10 rounded-xl bg-[#0e3a8c] hover:bg-[#092966] disabled:opacity-60 text-white text-sm font-bold shadow-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                  style={{
+                    width: '100%',
+                    height: '40px',
+                    borderRadius: '10px',
+                    border: 'none',
+                    background: '#0e3a8c',
+                    color: '#ffffff',
+                    fontSize: '13.5px',
+                    fontWeight: 700,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '7px',
+                    cursor: cargandoViajes ? 'not-allowed' : 'pointer',
+                    opacity: cargandoViajes ? 0.65 : 1,
+                    boxShadow: '0 4px 10px rgba(14, 58, 140, 0.2)',
+                  }}
                 >
-                  <span className={`material-symbols-outlined text-lg ${cargandoViajes ? 'animate-spin' : ''}`}>
+                  <span className={`material-symbols-outlined ${cargandoViajes ? 'animate-spin' : ''}`} style={{ fontSize: '18px' }}>
                     {cargandoViajes ? 'progress_activity' : 'search'}
                   </span>
                   <span>{cargandoViajes ? 'Buscando...' : 'Buscar'}</span>
@@ -609,8 +885,8 @@ export const GestionTiquetesPage = () => {
           </div>
 
           {/* Encabezado de Resultados */}
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-extrabold text-slate-800 dark:text-slate-100">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <h3 style={{ fontSize: '14px', fontWeight: 800, color: '#1e293b', margin: 0 }}>
               {cargandoViajes
                 ? 'Buscando viajes...'
                 : `${viajes.length} ${viajes.length === 1 ? 'viaje encontrado' : 'viajes encontrados'}`}
@@ -618,84 +894,151 @@ export const GestionTiquetesPage = () => {
             <button
               type="button"
               onClick={() => handleBuscarViajes()}
-              className="text-xs font-bold text-[#0e3a8c] dark:text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+              style={{
+                background: 'none',
+                border: 'none',
+                fontSize: '12.5px',
+                fontWeight: 700,
+                color: '#0e3a8c',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                cursor: 'pointer',
+              }}
             >
-              <span className="material-symbols-outlined text-sm">refresh</span>
+              <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>refresh</span>
               Actualizar lista
             </button>
           </div>
 
           {/* Lista de Viajes en Tarjetas Responsive */}
           {cargandoViajes ? (
-            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 py-16 flex flex-col items-center justify-center text-slate-500">
-              <span className="material-symbols-outlined text-4xl text-[#0e3a8c] animate-spin mb-2">
+            <div
+              style={{
+                background: '#ffffff',
+                borderRadius: '16px',
+                border: '1px solid #e2e8f0',
+                padding: '60px 24px',
+                textAlign: 'center',
+                color: '#64748b',
+              }}
+            >
+              <span className="material-symbols-outlined animate-spin" style={{ fontSize: '36px', color: '#0e3a8c', display: 'block', marginBottom: '10px' }}>
                 progress_activity
               </span>
-              <p className="text-sm font-semibold">Cargando viajes disponibles...</p>
+              <p style={{ fontSize: '13.5px', fontWeight: 600 }}>Cargando viajes disponibles...</p>
             </div>
           ) : viajes.length === 0 ? (
-            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 py-16 px-6 text-center">
-              <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto mb-3 text-slate-400">
-                <span className="material-symbols-outlined text-3xl">directions_bus</span>
-              </div>
-              <h4 className="text-base font-bold text-slate-800 dark:text-white">
+            <div
+              style={{
+                background: '#ffffff',
+                borderRadius: '16px',
+                border: '1px solid #e2e8f0',
+                padding: '60px 24px',
+                textAlign: 'center',
+              }}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: '42px', color: '#94a3b8', display: 'block', marginBottom: '10px' }}>
+                directions_bus
+              </span>
+              <h4 style={{ fontSize: '16px', fontWeight: 700, color: '#1e293b', margin: '0 0 4px' }}>
                 No se encontraron viajes
               </h4>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+              <p style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>
                 Prueba con otra ciudad, fecha o limpia los filtros para ver todos los viajes programados.
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 xl:grid-cols-2" style={{ gap: '16px' }}>
               {viajes.map((v) => {
                 const libres = Number(v.asientoslibrestramo ?? v.asientoslibres ?? 0);
                 const total = Number(v.totalasientos ?? 0);
                 const ocupados = Math.max(total - libres, 0);
                 const pct = total > 0 ? Math.min(Math.round((ocupados / total) * 100), 100) : 0;
-                const barColor = pct > 80 ? 'bg-red-500' : pct > 50 ? 'bg-amber-500' : 'bg-emerald-500';
+                const barHex = pct > 80 ? '#ef4444' : pct > 50 ? '#f59e0b' : '#22c55e';
                 const labelOrigen = v.nombreagenciaorigen || `Terminal ${v.ciudadorigen}`;
                 const labelDestino = v.nombreagenciadestino || `Terminal ${v.ciudaddestino}`;
 
                 return (
                   <div
                     key={v.idviaje}
-                    className="group bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 hover:border-[#0e3a8c]/60 p-5 shadow-xs hover:shadow-md transition-all flex flex-col justify-between gap-4"
+                    style={{
+                      background: '#ffffff',
+                      borderRadius: '16px',
+                      border: '1px solid #e2e8f0',
+                      padding: '20px 22px',
+                      boxShadow: '0 2px 8px rgba(15, 23, 42, 0.04)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      gap: '16px',
+                    }}
                   >
                     {/* Ruta visual: Terminal Origen ---> Terminal Destino */}
                     <div>
-                      <div className="flex items-center justify-between gap-2 mb-3">
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 dark:bg-blue-950/60 text-[#0e3a8c] dark:text-blue-300 text-[11px] font-bold">
-                          <span className="material-symbols-outlined text-sm">calendar_today</span>
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: '10px',
+                          marginBottom: '14px',
+                        }}
+                      >
+                        <span
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            padding: '5px 12px',
+                            borderRadius: '999px',
+                            background: '#eff6ff',
+                            color: '#0e3a8c',
+                            fontSize: '11.5px',
+                            fontWeight: 700,
+                          }}
+                        >
+                          <span className="material-symbols-outlined" style={{ fontSize: '15px' }}>calendar_today</span>
                           {fmtFecha(v.fechasalida)} · {fmtHora(v.horasalida)}
                         </span>
-                        <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
+                        <span
+                          style={{
+                            padding: '4px 10px',
+                            borderRadius: '8px',
+                            background: '#f8fafc',
+                            border: '1px solid #e2e8f0',
+                            fontSize: '11.5px',
+                            fontWeight: 700,
+                            color: '#475569',
+                          }}
+                        >
                           {v.nombretipobus}
                         </span>
                       </div>
 
-                      <div className="flex items-center gap-3">
-                        <div className="min-w-0">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ minWidth: 0 }}>
+                          <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#94a3b8', display: 'block', marginBottom: '2px' }}>
                             Origen
                           </span>
-                          <p className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white truncate">
+                          <p style={{ fontSize: '15.5px', fontWeight: 800, color: '#0f172a', margin: 0 }}>
                             {labelOrigen}
                           </p>
                         </div>
 
-                        <div className="flex-1 flex items-center gap-1 px-1 min-w-[44px]">
-                          <span className="w-2 h-2 rounded-full bg-[#0e3a8c] shrink-0" />
-                          <div className="flex-1 border-t-2 border-dashed border-slate-300 dark:border-slate-700" />
-                          <span className="material-symbols-outlined text-[#c62828] text-lg shrink-0">
+                        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '6px', minWidth: '48px', padding: '0 6px' }}>
+                          <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#0e3a8c', flexShrink: 0 }} />
+                          <div style={{ flex: 1, borderTop: '2px dashed #cbd5e1' }} />
+                          <span className="material-symbols-outlined" style={{ color: '#c62828', fontSize: '19px', flexShrink: 0 }}>
                             arrow_forward
                           </span>
                         </div>
 
-                        <div className="min-w-0 text-right">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                        <div style={{ minWidth: 0, textAlign: 'right' }}>
+                          <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#94a3b8', display: 'block', marginBottom: '2px' }}>
                             Destino
                           </span>
-                          <p className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white truncate">
+                          <p style={{ fontSize: '15.5px', fontWeight: 800, color: '#0f172a', margin: 0 }}>
                             {labelDestino}
                           </p>
                         </div>
@@ -703,25 +1046,35 @@ export const GestionTiquetesPage = () => {
                     </div>
 
                     {/* Info del Bus + Ocupación + Botón Ver Detalles */}
-                    <div className="pt-3.5 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                      <div className="space-y-1.5 flex-1">
-                        <div className="flex flex-wrap items-center gap-3 text-xs text-slate-600 dark:text-slate-300 font-semibold">
-                          <span className="inline-flex items-center gap-1">
-                            <span className="material-symbols-outlined text-sm text-[#0e3a8c]">directions_bus</span>
+                    <div
+                      style={{
+                        paddingTop: '14px',
+                        borderTop: '1px solid #f1f5f9',
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '12px',
+                      }}
+                    >
+                      <div style={{ flex: '1 1 200px' }}>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '14px', fontSize: '12.5px', fontWeight: 600, color: '#475569', marginBottom: '8px' }}>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                            <span className="material-symbols-outlined" style={{ fontSize: '16px', color: '#0e3a8c' }}>directions_bus</span>
                             Móvil {v.numeromovil}
                           </span>
-                          <span className="inline-flex items-center gap-1 font-mono">
-                            <span className="material-symbols-outlined text-sm text-slate-400">badge</span>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontFamily: 'monospace' }}>
+                            <span className="material-symbols-outlined" style={{ fontSize: '16px', color: '#94a3b8' }}>badge</span>
                             {v.placa}
                           </span>
                         </div>
 
-                        <div className="flex items-center gap-2 max-w-[260px]">
-                          <div className="flex-1 h-1.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
-                            <div className={`h-full rounded-full ${barColor}`} style={{ width: `${pct}%` }} />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', maxWidth: '260px' }}>
+                          <div style={{ flex: 1, height: '6px', borderRadius: '999px', background: '#e2e8f0', overflow: 'hidden' }}>
+                            <div style={{ height: '100%', width: `${pct}%`, background: barHex, borderRadius: '999px' }} />
                           </div>
-                          <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 whitespace-nowrap">
-                            {ocupados} vendidos · <strong className="text-emerald-600">{libres} libres</strong>
+                          <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#64748b', whiteSpace: 'nowrap' }}>
+                            {ocupados} vendidos · <strong style={{ color: '#16a34a' }}>{libres} libres</strong>
                           </span>
                         </div>
                       </div>
@@ -729,11 +1082,24 @@ export const GestionTiquetesPage = () => {
                       <button
                         type="button"
                         onClick={() => handleAbrirDetalleViaje(v)}
-                        className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#0e3a8c] hover:bg-[#092966] text-white text-xs font-bold shadow-xs transition-all cursor-pointer shrink-0"
+                        style={{
+                          padding: '10px 18px',
+                          borderRadius: '11px',
+                          border: 'none',
+                          background: '#0e3a8c',
+                          color: '#ffffff',
+                          fontSize: '12.5px',
+                          fontWeight: 700,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '7px',
+                          cursor: 'pointer',
+                          boxShadow: '0 3px 8px rgba(14, 58, 140, 0.2)',
+                        }}
                       >
-                        <span className="material-symbols-outlined text-base">event_seat</span>
+                        <span className="material-symbols-outlined" style={{ fontSize: '17px' }}>event_seat</span>
                         <span>Ver detalles</span>
-                        <span className="material-symbols-outlined text-base">arrow_forward</span>
+                        <span className="material-symbols-outlined" style={{ fontSize: '17px' }}>arrow_forward</span>
                       </button>
                     </div>
                   </div>
@@ -748,9 +1114,9 @@ export const GestionTiquetesPage = () => {
           PANTALLA 2: INFORMACIÓN DEL BUS + MAPA DE ASIENTOS + BUSCADOR CLIENTE
          ===================================================================== */}
       {viajeSeleccionado && (
-        <div className="space-y-5">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           {/* Barra superior de regreso y actualización */}
-          <div className="flex flex-wrap items-center justify-between gap-3">
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
             <button
               type="button"
               onClick={() => {
@@ -758,9 +1124,21 @@ export const GestionTiquetesPage = () => {
                 setFiltroPasajero('');
                 setTiqueteDetalle(null);
               }}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:border-[#0e3a8c] text-slate-700 dark:text-slate-200 text-xs font-bold shadow-2xs transition-all cursor-pointer"
+              style={{
+                padding: '9px 16px',
+                borderRadius: '11px',
+                border: '1px solid #cbd5e1',
+                background: '#ffffff',
+                color: '#1e293b',
+                fontSize: '12.5px',
+                fontWeight: 700,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                cursor: 'pointer',
+              }}
             >
-              <span className="material-symbols-outlined text-base">arrow_back</span>
+              <span className="material-symbols-outlined" style={{ fontSize: '17px' }}>arrow_back</span>
               <span>Volver a Viajes</span>
             </button>
 
@@ -768,9 +1146,21 @@ export const GestionTiquetesPage = () => {
               type="button"
               onClick={() => handleAbrirDetalleViaje(viajeSeleccionado, filtroPasajero)}
               disabled={cargandoDetalle}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:border-[#0e3a8c] text-[#0e3a8c] dark:text-blue-400 text-xs font-bold shadow-2xs transition-all cursor-pointer"
+              style={{
+                padding: '9px 16px',
+                borderRadius: '11px',
+                border: '1px solid #cbd5e1',
+                background: '#ffffff',
+                color: '#0e3a8c',
+                fontSize: '12.5px',
+                fontWeight: 700,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                cursor: 'pointer',
+              }}
             >
-              <span className={`material-symbols-outlined text-base ${cargandoDetalle ? 'animate-spin' : ''}`}>
+              <span className={`material-symbols-outlined ${cargandoDetalle ? 'animate-spin' : ''}`} style={{ fontSize: '17px' }}>
                 refresh
               </span>
               <span>Actualizar mapa</span>
@@ -778,63 +1168,122 @@ export const GestionTiquetesPage = () => {
           </div>
 
           {/* Tarjeta de Información del Bus y KPIs del Viaje */}
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
-            <div className="h-1 bg-gradient-to-r from-[#0e3a8c] via-[#1d4ed8] to-[#c62828]" />
-            <div className="p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: '16px',
+              border: '1px solid #e2e8f0',
+              boxShadow: '0 2px 10px rgba(15, 23, 42, 0.04)',
+              overflow: 'hidden',
+            }}
+          >
+            <div style={{ height: '5px', background: 'linear-gradient(90deg, #0e3a8c 0%, #1d4ed8 55%, #c62828 100%)' }} />
+            <div
+              style={{
+                padding: '20px 24px',
+                display: 'flex',
+                flexWrap: 'wrap',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '20px',
+              }}
+            >
               {/* Info Bus y Ruta */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/60 text-[#0e3a8c] dark:text-blue-300 text-[11px] font-extrabold">
-                    <span className="material-symbols-outlined text-sm">directions_bus</span>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '8px' }}>
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      padding: '4px 11px',
+                      borderRadius: '999px',
+                      background: '#eff6ff',
+                      color: '#0e3a8c',
+                      fontSize: '11.5px',
+                      fontWeight: 800,
+                    }}
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: '15px' }}>directions_bus</span>
                     Móvil {viajeSeleccionado.numeromovil}
                   </span>
-                  <span className="px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[11px] font-mono font-bold">
+                  <span
+                    style={{
+                      padding: '4px 11px',
+                      borderRadius: '999px',
+                      background: '#f1f5f9',
+                      color: '#334155',
+                      fontSize: '11.5px',
+                      fontFamily: 'monospace',
+                      fontWeight: 700,
+                    }}
+                  >
                     {viajeSeleccionado.placa}
                   </span>
-                  <span className="px-2.5 py-0.5 rounded-full bg-red-50 dark:bg-red-950/50 text-[#c62828] dark:text-red-300 text-[11px] font-bold">
+                  <span
+                    style={{
+                      padding: '4px 11px',
+                      borderRadius: '999px',
+                      background: '#fef2f2',
+                      color: '#c62828',
+                      fontSize: '11.5px',
+                      fontWeight: 700,
+                    }}
+                  >
                     {viajeSeleccionado.nombretipobus}
                   </span>
                 </div>
 
-                <h2 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white flex items-center gap-2 flex-wrap">
+                <h2
+                  style={{
+                    fontSize: '19px',
+                    fontWeight: 900,
+                    color: '#0f172a',
+                    margin: '0 0 4px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    flexWrap: 'wrap',
+                  }}
+                >
                   <span>{viajeSeleccionado.nombreagenciaorigen || `Terminal ${viajeSeleccionado.ciudadorigen}`}</span>
-                  <span className="material-symbols-outlined text-[#c62828] text-xl">arrow_forward</span>
+                  <span className="material-symbols-outlined" style={{ color: '#c62828', fontSize: '21px' }}>
+                    arrow_forward
+                  </span>
                   <span>{viajeSeleccionado.nombreagenciadestino || `Terminal ${viajeSeleccionado.ciudaddestino}`}</span>
                 </h2>
 
-                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                <p style={{ fontSize: '12.5px', fontWeight: 600, color: '#64748b', margin: 0 }}>
                   {fmtFecha(viajeSeleccionado.fechasalida)} · Salida {fmtHora(viajeSeleccionado.horasalida)} · Capacidad{' '}
                   {viajeSeleccionado.totalasientos} sillas
                 </p>
               </div>
 
               {/* 4 KPIs compactos */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 shrink-0">
-                <div className="px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/80 dark:border-slate-700">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+              <div className="grid grid-cols-2 sm:grid-cols-4" style={{ gap: '10px' }}>
+                <div style={{ padding: '10px 16px', borderRadius: '12px', background: '#f8fafc', border: '1px solid #e2e8f0' }}>
+                  <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', color: '#64748b', display: 'block' }}>
                     Tiquetes
                   </span>
-                  <span className="text-lg font-black text-slate-900 dark:text-white">{totalTiquetes}</span>
+                  <span style={{ fontSize: '18px', fontWeight: 900, color: '#0f172a' }}>{totalTiquetes}</span>
                 </div>
-                <div className="px-3.5 py-2.5 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/40 border border-emerald-200/70 dark:border-emerald-800">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 block">
+                <div style={{ padding: '10px 16px', borderRadius: '12px', background: '#f0fdf4', border: '1px solid #bbf7d0' }}>
+                  <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', color: '#15803d', display: 'block' }}>
                     Validados
                   </span>
-                  <span className="text-lg font-black text-emerald-700 dark:text-emerald-300">{totalValidados}</span>
+                  <span style={{ fontSize: '18px', fontWeight: 900, color: '#15803d' }}>{totalValidados}</span>
                 </div>
-                <div className="px-3.5 py-2.5 rounded-xl bg-amber-50/70 dark:bg-amber-950/40 border border-amber-200/70 dark:border-amber-800">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 block">
+                <div style={{ padding: '10px 16px', borderRadius: '12px', background: '#fffbeb', border: '1px solid #fde68a' }}>
+                  <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', color: '#b45309', display: 'block' }}>
                     Pendientes
                   </span>
-                  <span className="text-lg font-black text-amber-700 dark:text-amber-300">{totalPendientes}</span>
+                  <span style={{ fontSize: '18px', fontWeight: 900, color: '#b45309' }}>{totalPendientes}</span>
                 </div>
-                <div className="px-3.5 py-2.5 rounded-xl bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200/70 dark:border-blue-800">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#0e3a8c] dark:text-blue-400 block">
+                <div style={{ padding: '10px 16px', borderRadius: '12px', background: '#eff6ff', border: '1px solid #bfdbfe' }}>
+                  <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', color: '#0e3a8c', display: 'block' }}>
                     Ingreso
                   </span>
-                  <span className="text-base sm:text-lg font-black text-[#0e3a8c] dark:text-blue-300">
-                    {fmtMoneda(ingresoTotal)}
-                  </span>
+                  <span style={{ fontSize: '17px', fontWeight: 900, color: '#0e3a8c' }}>{fmtMoneda(ingresoTotal)}</span>
                 </div>
               </div>
             </div>
@@ -842,24 +1291,44 @@ export const GestionTiquetesPage = () => {
 
           {/* Error al cargar */}
           {errorDetalle && (
-            <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm font-semibold flex items-center gap-2">
+            <div style={{ padding: '14px 18px', borderRadius: '12px', background: '#fef2f2', border: '1px solid #fca5a5', color: '#991b1b', fontSize: '13.5px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span className="material-symbols-outlined">error</span>
               <span>{errorDetalle}</span>
             </div>
           )}
 
           {/* Grid Principal: Mapa de Asientos (Izq) + Buscador y Pasajeros (Der) */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          <div className="grid grid-cols-1 lg:grid-cols-12 items-start" style={{ gap: '22px' }}>
             {/* ── Columna Izquierda: Diseñador / Mapa Interactivo de Asientos ── */}
-            <div className="lg:col-span-5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 sm:p-6 shadow-xs">
-              <div className="text-center mb-4">
-                <h3 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center justify-center gap-1.5">
-                  <span className="material-symbols-outlined text-[#0e3a8c] dark:text-blue-400 text-lg">
+            <div
+              className="lg:col-span-5"
+              style={{
+                background: '#ffffff',
+                borderRadius: '16px',
+                border: '1px solid #e2e8f0',
+                padding: '22px',
+                boxShadow: '0 2px 10px rgba(15, 23, 42, 0.04)',
+              }}
+            >
+              <div style={{ textAlign: 'center', marginBottom: '16px' }}>
+                <h3
+                  style={{
+                    fontSize: '15px',
+                    fontWeight: 800,
+                    color: '#0f172a',
+                    margin: '0 0 4px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '7px',
+                  }}
+                >
+                  <span className="material-symbols-outlined" style={{ color: '#0e3a8c', fontSize: '19px' }}>
                     event_seat
                   </span>
                   Mapa de Asientos del Bus
                 </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                <p style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>
                   Haz clic sobre cualquier asiento ocupado para ver el cliente y descargar su tiquete.
                 </p>
               </div>
@@ -879,44 +1348,100 @@ export const GestionTiquetesPage = () => {
             </div>
 
             {/* ── Columna Derecha: Buscador por Nombre o Cédula + Pasajeros ── */}
-            <div className="lg:col-span-7 space-y-4">
+            <div className="lg:col-span-7" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {/* Buscador destacado de Pasajero */}
-              <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-xs space-y-3.5">
-                <div>
-                  <h3 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-1.5">
-                    <span className="material-symbols-outlined text-[#c62828] text-lg">person_search</span>
+              <div
+                style={{
+                  background: '#ffffff',
+                  borderRadius: '16px',
+                  border: '1px solid #e2e8f0',
+                  padding: '20px 22px',
+                  boxShadow: '0 2px 10px rgba(15, 23, 42, 0.04)',
+                }}
+              >
+                <div style={{ marginBottom: '14px' }}>
+                  <h3
+                    style={{
+                      fontSize: '15px',
+                      fontWeight: 800,
+                      color: '#0f172a',
+                      margin: '0 0 3px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '7px',
+                    }}
+                  >
+                    <span className="material-symbols-outlined" style={{ color: '#c62828', fontSize: '19px' }}>
+                      person_search
+                    </span>
                     Ubicar Pasajero en el Bus
                   </h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  <p style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>
                     Escribe el nombre o número de cédula para resaltar automáticamente su asiento en el mapa.
                   </p>
                 </div>
 
-                <div className="flex flex-col sm:flex-row gap-2.5">
-                  <div className="relative flex-1">
-                    <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-lg pointer-events-none">
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
+                  <div style={{ position: 'relative', flex: '1 1 240px' }}>
+                    <span
+                      className="material-symbols-outlined"
+                      style={{
+                        position: 'absolute',
+                        left: '13px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        color: '#94a3b8',
+                        fontSize: '19px',
+                        pointerEvents: 'none',
+                      }}
+                    >
                       search
                     </span>
                     <input
                       value={filtroPasajero}
                       onChange={(e) => setFiltroPasajero(e.target.value)}
                       placeholder="Buscar por nombre, cédula o N° de tiquete..."
-                      className="w-full h-11 pl-10 pr-9 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-800 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0e3a8c]/25 focus:border-[#0e3a8c]"
+                      style={{ ...inputBaseStyle, height: '42px', paddingLeft: '40px', paddingRight: '34px' }}
                     />
                     {filtroPasajero && (
                       <button
                         type="button"
                         onClick={() => setFiltroPasajero('')}
-                        className="absolute right-2.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-200/70 cursor-pointer"
+                        style={{
+                          position: 'absolute',
+                          right: '10px',
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          width: '24px',
+                          height: '24px',
+                          borderRadius: '50%',
+                          border: 'none',
+                          background: '#e2e8f0',
+                          color: '#475569',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'pointer',
+                        }}
                         aria-label="Limpiar búsqueda"
                       >
-                        <span className="material-symbols-outlined text-base">close</span>
+                        <span className="material-symbols-outlined" style={{ fontSize: '15px' }}>close</span>
                       </button>
                     )}
                   </div>
 
                   {/* Filtro de estado */}
-                  <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700 shrink-0">
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      background: '#f1f5f9',
+                      padding: '4px',
+                      borderRadius: '11px',
+                      border: '1px solid #e2e8f0',
+                    }}
+                  >
                     {(
                       [
                         { id: 'todos', label: 'Todos' },
@@ -928,11 +1453,16 @@ export const GestionTiquetesPage = () => {
                         key={op.id}
                         type="button"
                         onClick={() => setFiltroEstado(op.id)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                          filtroEstado === op.id
-                            ? 'bg-[#0e3a8c] text-white shadow-2xs'
-                            : 'text-slate-600 dark:text-slate-300 hover:text-slate-900'
-                        }`}
+                        style={{
+                          padding: '7px 13px',
+                          borderRadius: '8px',
+                          border: 'none',
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          background: filtroEstado === op.id ? '#0e3a8c' : 'transparent',
+                          color: filtroEstado === op.id ? '#ffffff' : '#475569',
+                        }}
                       >
                         {op.label}
                       </button>
@@ -943,13 +1473,21 @@ export const GestionTiquetesPage = () => {
                 {/* Banner cuando hay coincidencias en el mapa */}
                 {hayBusquedaPasajero && (
                   <div
-                    className={`px-3.5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 ${
-                      tiquetesFiltrados.length > 0
-                        ? 'bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-[#c62828] dark:text-red-300'
-                        : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
-                    }`}
+                    style={{
+                      marginTop: '12px',
+                      padding: '10px 14px',
+                      borderRadius: '11px',
+                      fontSize: '12.5px',
+                      fontWeight: 700,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      background: tiquetesFiltrados.length > 0 ? '#fef2f2' : '#f1f5f9',
+                      border: `1px solid ${tiquetesFiltrados.length > 0 ? '#fecaca' : '#e2e8f0'}`,
+                      color: tiquetesFiltrados.length > 0 ? '#c62828' : '#64748b',
+                    }}
                   >
-                    <span className="material-symbols-outlined text-base">
+                    <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
                       {tiquetesFiltrados.length > 0 ? 'location_searching' : 'search_off'}
                     </span>
                     {tiquetesFiltrados.length > 0 ? (
@@ -968,32 +1506,51 @@ export const GestionTiquetesPage = () => {
               </div>
 
               {/* Lista de Pasajeros del Viaje */}
-              <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
-                <div className="px-5 py-3.5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                  <span className="text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              <div
+                style={{
+                  background: '#ffffff',
+                  borderRadius: '16px',
+                  border: '1px solid #e2e8f0',
+                  boxShadow: '0 2px 10px rgba(15, 23, 42, 0.04)',
+                  overflow: 'hidden',
+                }}
+              >
+                <div
+                  style={{
+                    padding: '14px 20px',
+                    borderBottom: '1px solid #e2e8f0',
+                    background: '#f8fafc',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <span style={{ fontSize: '11.5px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#475569' }}>
                     Pasajeros con Tiquete ({tiquetesFiltrados.length})
                   </span>
-                  <span className="text-[11px] text-slate-400">Clic para ver detalle y descargar PDF</span>
+                  <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600 }}>
+                    Clic para ver detalle y descargar PDF
+                  </span>
                 </div>
 
                 {cargandoDetalle ? (
-                  <div className="py-12 text-center text-slate-400 text-xs font-semibold">
+                  <div style={{ padding: '48px 20px', textAlign: 'center', color: '#94a3b8', fontSize: '13px', fontWeight: 600 }}>
                     Cargando pasajeros...
                   </div>
                 ) : tiquetesFiltrados.length === 0 ? (
-                  <div className="py-12 px-6 text-center">
-                    <span className="material-symbols-outlined text-4xl text-slate-300 dark:text-slate-600 block mb-2">
+                  <div style={{ padding: '48px 20px', textAlign: 'center' }}>
+                    <span className="material-symbols-outlined" style={{ fontSize: '40px', color: '#cbd5e1', display: 'block', marginBottom: '8px' }}>
                       airline_seat_recline_normal
                     </span>
-                    <p className="text-sm font-bold text-slate-600 dark:text-slate-300">
+                    <p style={{ fontSize: '14px', fontWeight: 700, color: '#475569', margin: 0 }}>
                       {tiquetes.length === 0
                         ? 'Aún no hay tiquetes vendidos en este viaje'
                         : 'Sin pasajeros que coincidan con el filtro'}
                     </p>
                   </div>
                 ) : (
-                  <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-[520px] overflow-y-auto">
-                    {tiquetesFiltrados.map((t) => {
+                  <div style={{ maxHeight: '520px', overflowY: 'auto' }}>
+                    {tiquetesFiltrados.map((t, idx) => {
                       const resaltado = hayBusquedaPasajero && tiquetesResaltadosIds.has(t.idtiquete);
                       const esValido = Boolean(t.validado);
 
@@ -1001,43 +1558,64 @@ export const GestionTiquetesPage = () => {
                         <div
                           key={t.idtiquete}
                           onClick={() => setTiqueteDetalle(t)}
-                          className={`p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 cursor-pointer transition-colors ${
-                            resaltado
-                              ? 'bg-red-50/70 dark:bg-red-950/25 hover:bg-red-50'
-                              : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'
-                          }`}
+                          style={{
+                            padding: '14px 20px',
+                            borderTop: idx === 0 ? 'none' : '1px solid #f1f5f9',
+                            background: resaltado ? '#fef2f2' : '#ffffff',
+                            display: 'flex',
+                            flexWrap: 'wrap',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: '12px',
+                            cursor: 'pointer',
+                          }}
                         >
-                          <div className="flex items-center gap-3.5 min-w-0">
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0, flex: '1 1 220px' }}>
                             <div
-                              className={`w-11 h-11 rounded-xl flex flex-col items-center justify-center shrink-0 font-black text-white shadow-2xs ${
-                                resaltado
-                                  ? 'bg-[#c62828] ring-2 ring-red-300'
-                                  : esValido
-                                  ? 'bg-emerald-600'
-                                  : 'bg-[#0e3a8c]'
-                              }`}
+                              style={{
+                                width: '44px',
+                                height: '44px',
+                                borderRadius: '12px',
+                                background: resaltado ? '#c62828' : esValido ? '#16a34a' : '#0e3a8c',
+                                color: '#ffffff',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                flexShrink: 0,
+                              }}
                             >
-                              <span className="text-[8px] font-bold uppercase opacity-80 leading-none">Silla</span>
-                              <span className="text-sm leading-tight">{t.numeroasiento}</span>
+                              <span style={{ fontSize: '8px', fontWeight: 700, textTransform: 'uppercase', opacity: 0.85, lineHeight: 1 }}>
+                                Silla
+                              </span>
+                              <span style={{ fontSize: '15px', fontWeight: 900, lineHeight: 1.15 }}>
+                                {t.numeroasiento}
+                              </span>
                             </div>
 
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <p className="text-sm font-extrabold text-slate-900 dark:text-white uppercase truncate">
+                            <div style={{ minWidth: 0 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                <p style={{ fontSize: '13.5px', fontWeight: 800, color: '#0f172a', textTransform: 'uppercase', margin: 0 }}>
                                   {`${t.nombre ?? ''} ${t.apellido ?? ''}`.trim() || 'Pasajero'}
                                 </p>
                                 <span
-                                  className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                                    esValido
-                                      ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
-                                      : 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
-                                  }`}
+                                  style={{
+                                    padding: '2px 8px',
+                                    borderRadius: '999px',
+                                    fontSize: '10px',
+                                    fontWeight: 700,
+                                    textTransform: 'uppercase',
+                                    background: esValido ? '#dcfce7' : '#fef3c7',
+                                    color: esValido ? '#166534' : '#92400e',
+                                  }}
                                 >
                                   {esValido ? 'Validado' : 'Pendiente'}
                                 </span>
                               </div>
-                              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">
-                                <span className="font-mono font-semibold">{fmtDoc(t.tipodocumento, t.numerodocumento)}</span>
+                              <p style={{ fontSize: '12px', color: '#64748b', margin: '3px 0 0' }}>
+                                <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>
+                                  {fmtDoc(t.tipodocumento, t.numerodocumento)}
+                                </span>
                                 {' · '}
                                 <span>
                                   {t.origentramo || viajeSeleccionado.ciudadorigen} →{' '}
@@ -1047,12 +1625,12 @@ export const GestionTiquetesPage = () => {
                             </div>
                           </div>
 
-                          <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pl-14 sm:pl-0">
-                            <div className="text-left sm:text-right">
-                              <span className="text-sm font-black text-slate-900 dark:text-white block">
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
+                            <div style={{ textAlign: 'right' }}>
+                              <span style={{ fontSize: '14px', fontWeight: 900, color: '#0f172a', display: 'block' }}>
                                 {fmtMoneda(t.valorcobrado)}
                               </span>
-                              <span className="text-[10px] font-bold uppercase text-slate-400">
+                              <span style={{ fontSize: '10.5px', fontWeight: 700, color: '#94a3b8' }}>
                                 {t.codigotiquete || `#${t.idtiquete}`}
                               </span>
                             </div>
@@ -1063,9 +1641,18 @@ export const GestionTiquetesPage = () => {
                                 e.stopPropagation();
                                 setTiqueteDetalle(t);
                               }}
-                              className="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-[#0e3a8c] hover:text-white text-slate-700 dark:text-slate-200 text-xs font-bold transition-colors cursor-pointer"
+                              style={{
+                                padding: '7px 14px',
+                                borderRadius: '9px',
+                                border: '1px solid #cbd5e1',
+                                background: '#f8fafc',
+                                color: '#0e3a8c',
+                                fontSize: '12px',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                              }}
                             >
-                              Abrir
+                              Ver tiquete
                             </button>
                           </div>
                         </div>
