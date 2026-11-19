@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import heic2any from 'heic2any';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
@@ -8,6 +8,7 @@ import { FOTO_PERFIL_LOCAL_KEY } from '../../components/common/AvatarUsuario';
 import { ROUTES } from '../../../shared/constants';
 import type { Idioma } from '../../../shared/i18n/translations';
 import { httpClient } from '../../../infrastructure/api/httpClient';
+import { millasApi, type MillasResumen, type ConfiguracionPublicaMillas } from '../../../infrastructure/api/millasApi';
 import type { Cliente } from '../../../domain/entities/Cliente';
 
 type TabAjustes = 'perfil' | 'millas' | 'seguridad' | 'preferencias' | 'notificaciones';
@@ -21,6 +22,35 @@ export function PerfilPage() {
 
   // Pestaña activa
   const [tabActiva, setTabActiva] = useState<TabAjustes>('perfil');
+
+  // Datos reales de Millas & Fidelización
+  const [resumenMillas, setResumenMillas] = useState<MillasResumen | null>(null);
+  const [configMillas, setConfigMillas] = useState<ConfiguracionPublicaMillas | null>(null);
+  const [cargandoMillas, setCargandoMillas] = useState(false);
+
+  useEffect(() => {
+    if (!usuario || tabActiva !== 'millas') return;
+    let activo = true;
+    setCargandoMillas(true);
+    Promise.all([
+      millasApi.obtenerResumen(),
+      millasApi.obtenerConfiguracionPublica().catch(() => null),
+    ])
+      .then(([resumen, config]) => {
+        if (!activo) return;
+        setResumenMillas(resumen);
+        if (config) setConfigMillas(config);
+      })
+      .catch((err) => {
+        console.error('Error al cargar resumen de millas en perfil:', err);
+      })
+      .finally(() => {
+        if (activo) setCargandoMillas(false);
+      });
+    return () => {
+      activo = false;
+    };
+  }, [tabActiva, usuario]);
 
   // Estado del formulario
   const [nombre, setNombre] = useState(usuario?.nombre ?? '');
@@ -231,11 +261,10 @@ export function PerfilPage() {
               <button
                 type="button"
                 onClick={() => setTabActiva('perfil')}
-                className={`w-full text-left px-4 py-2.5 rounded-xl text-sm font-extrabold transition-all flex items-center gap-2.5 ${
-                  tabActiva === 'perfil'
-                    ? 'bg-blue-50 dark:bg-blue-950/60 text-[#0e3a8c] dark:text-blue-400 font-black shadow-xs'
-                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100/70 dark:hover:bg-slate-800/50'
-                }`}
+                className={`w-full text-left px-4 py-2.5 rounded-xl text-sm font-extrabold transition-all flex items-center gap-2.5 ${tabActiva === 'perfil'
+                  ? 'bg-blue-50 dark:bg-blue-950/60 text-[#0e3a8c] dark:text-blue-400 font-black shadow-xs'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100/70 dark:hover:bg-slate-800/50'
+                  }`}
               >
                 <span className="material-symbols-outlined text-lg">person</span>
                 <span>{idioma === 'es' ? 'Perfil público' : 'Public Profile'}</span>
@@ -244,11 +273,10 @@ export function PerfilPage() {
               <button
                 type="button"
                 onClick={() => setTabActiva('millas')}
-                className={`w-full text-left px-4 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center justify-between ${
-                  tabActiva === 'millas'
-                    ? 'bg-blue-50 dark:bg-blue-950/60 text-[#0e3a8c] dark:text-blue-400 font-black shadow-xs'
-                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100/70 dark:hover:bg-slate-800/50'
-                }`}
+                className={`w-full text-left px-4 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center justify-between ${tabActiva === 'millas'
+                  ? 'bg-blue-50 dark:bg-blue-950/60 text-[#0e3a8c] dark:text-blue-400 font-black shadow-xs'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100/70 dark:hover:bg-slate-800/50'
+                  }`}
               >
                 <div className="flex items-center gap-2.5">
                   <span className="material-symbols-outlined text-lg text-amber-500">loyalty</span>
@@ -262,11 +290,10 @@ export function PerfilPage() {
               <button
                 type="button"
                 onClick={() => setTabActiva('seguridad')}
-                className={`w-full text-left px-4 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2.5 ${
-                  tabActiva === 'seguridad'
-                    ? 'bg-blue-50 dark:bg-blue-950/60 text-[#0e3a8c] dark:text-blue-400 font-black shadow-xs'
-                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100/70 dark:hover:bg-slate-800/50'
-                }`}
+                className={`w-full text-left px-4 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2.5 ${tabActiva === 'seguridad'
+                  ? 'bg-blue-50 dark:bg-blue-950/60 text-[#0e3a8c] dark:text-blue-400 font-black shadow-xs'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100/70 dark:hover:bg-slate-800/50'
+                  }`}
               >
                 <span className="material-symbols-outlined text-lg">shield</span>
                 <span>{idioma === 'es' ? 'Seguridad & Cuenta' : 'Security & Account'}</span>
@@ -275,11 +302,10 @@ export function PerfilPage() {
               <button
                 type="button"
                 onClick={() => setTabActiva('preferencias')}
-                className={`w-full text-left px-4 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2.5 ${
-                  tabActiva === 'preferencias'
-                    ? 'bg-blue-50 dark:bg-blue-950/60 text-[#0e3a8c] dark:text-blue-400 font-black shadow-xs'
-                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100/70 dark:hover:bg-slate-800/50'
-                }`}
+                className={`w-full text-left px-4 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2.5 ${tabActiva === 'preferencias'
+                  ? 'bg-blue-50 dark:bg-blue-950/60 text-[#0e3a8c] dark:text-blue-400 font-black shadow-xs'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100/70 dark:hover:bg-slate-800/50'
+                  }`}
               >
                 <span className="material-symbols-outlined text-lg">tune</span>
                 <span>{idioma === 'es' ? 'Permisos & Preferencias' : 'Role & Preferences'}</span>
@@ -288,11 +314,10 @@ export function PerfilPage() {
               <button
                 type="button"
                 onClick={() => setTabActiva('notificaciones')}
-                className={`w-full text-left px-4 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2.5 ${
-                  tabActiva === 'notificaciones'
-                    ? 'bg-blue-50 dark:bg-blue-950/60 text-[#0e3a8c] dark:text-blue-400 font-black shadow-xs'
-                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100/70 dark:hover:bg-slate-800/50'
-                }`}
+                className={`w-full text-left px-4 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2.5 ${tabActiva === 'notificaciones'
+                  ? 'bg-blue-50 dark:bg-blue-950/60 text-[#0e3a8c] dark:text-blue-400 font-black shadow-xs'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100/70 dark:hover:bg-slate-800/50'
+                  }`}
               >
                 <span className="material-symbols-outlined text-lg">notifications</span>
                 <span>{idioma === 'es' ? 'Notificaciones' : 'Notifications'}</span>
@@ -532,7 +557,7 @@ export function PerfilPage() {
                       </span>
                     </div>
                     <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                      Socio VIP
+                      {resumenMillas?.nivel?.nombre || 'Socio VIP'}
                     </span>
                   </div>
 
@@ -542,7 +567,14 @@ export function PerfilPage() {
                         {idioma === 'es' ? 'Millas Disponibles' : 'Available Miles'}
                       </span>
                       <span className="text-3xl font-black text-white tracking-tight">
-                        350+ <span className="text-sm font-semibold opacity-80">pts</span>
+                        {cargandoMillas && !resumenMillas ? (
+                          <span className="inline-block w-20 h-7 bg-white/15 rounded-lg animate-pulse align-middle" />
+                        ) : (
+                          <>
+                            {Number(resumenMillas?.saldoMillas ?? 0).toLocaleString('es-CO')}{' '}
+                            <span className="text-sm font-semibold opacity-80">pts</span>
+                          </>
+                        )}
                       </span>
                     </div>
 
@@ -551,7 +583,11 @@ export function PerfilPage() {
                         {idioma === 'es' ? 'Equivalencia en Descuento' : 'Cash Discount Equivalent'}
                       </span>
                       <span className="text-2xl font-black text-emerald-300 tracking-tight">
-                        $3,500+ COP
+                        {cargandoMillas && !resumenMillas ? (
+                          <span className="inline-block w-28 h-7 bg-white/15 rounded-lg animate-pulse align-middle" />
+                        ) : (
+                          `$${Number(resumenMillas?.valorEquivalenteCop ?? 0).toLocaleString('es-CO')} COP`
+                        )}
                       </span>
                     </div>
                   </div>
@@ -559,7 +595,11 @@ export function PerfilPage() {
                   <div className="pt-3 border-t border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-200">
                     <div className="flex items-center gap-2">
                       <span className="material-symbols-outlined text-sm text-amber-300">verified</span>
-                      <span>{idioma === 'es' ? 'Acumulas 1 milla por cada $100 COP en tiquetes' : 'Earn 1 mile for every $100 COP spent on tickets'}</span>
+                      <span>
+                        {idioma === 'es'
+                          ? `Acumulas 1 milla por cada $${Number(configMillas?.pesosPorMilla ?? 100).toLocaleString('es-CO')} COP en tiquetes`
+                          : `Earn 1 mile for every $${Number(configMillas?.pesosPorMilla ?? 100).toLocaleString('es-CO')} COP spent on tickets`}
+                      </span>
                     </div>
                     <button
                       type="button"
@@ -677,14 +717,12 @@ export function PerfilPage() {
                     onClick={toggleTema}
                     role="switch"
                     aria-checked={esDark}
-                    className={`relative inline-flex h-7 w-14 shrink-0 cursor-pointer items-center rounded-full p-1 transition-colors duration-300 ease-in-out focus:outline-none ${
-                      esDark ? 'bg-blue-600' : 'bg-slate-200 dark:bg-slate-700'
-                    }`}
+                    className={`relative inline-flex h-7 w-14 shrink-0 cursor-pointer items-center rounded-full p-1 transition-colors duration-300 ease-in-out focus:outline-none ${esDark ? 'bg-blue-600' : 'bg-slate-200 dark:bg-slate-700'
+                      }`}
                   >
                     <span
-                      className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition-transform duration-300 ease-in-out ${
-                        esDark ? 'translate-x-7' : 'translate-x-0'
-                      }`}
+                      className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition-transform duration-300 ease-in-out ${esDark ? 'translate-x-7' : 'translate-x-0'
+                        }`}
                     />
                   </button>
                 </div>
@@ -704,11 +742,10 @@ export function PerfilPage() {
                       <button
                         key={lang}
                         onClick={() => setIdioma(lang)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                          idioma === lang
-                            ? 'bg-blue-600 text-white shadow-xs'
-                            : 'text-slate-500 dark:text-slate-400 hover:text-slate-900'
-                        }`}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${idioma === lang
+                          ? 'bg-blue-600 text-white shadow-xs'
+                          : 'text-slate-500 dark:text-slate-400 hover:text-slate-900'
+                          }`}
                       >
                         {lang.toUpperCase()}
                       </button>
