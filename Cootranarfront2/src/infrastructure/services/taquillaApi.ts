@@ -117,6 +117,13 @@ export const taquillaApiService = {
   obtenerReprogramacionesTiquete: (idTiquete: number) => {
     return httpClient.get(`/taquilla/tiquetes/${idTiquete}/reprogramaciones`);
   },
+
+  // Liberar asiento cuando el pasajero no asiste a tiempo (queda libre para reventa)
+  liberarAsientoInasistencia: (idTiquete: number) => {
+    return httpClient.post<{ success: boolean; message: string; data: any }>(
+      `/taquilla/tiquetes/${idTiquete}/liberar-inasistencia`
+    );
+  },
 };
 
 export default taquillaApiService;

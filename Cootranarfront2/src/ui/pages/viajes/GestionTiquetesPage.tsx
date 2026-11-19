@@ -79,6 +79,8 @@ function ModalDetalleCliente({
   onDescargarPdf,
   descargandoPdfId,
   onReprogramar,
+  onLiberarInasistencia,
+  liberandoInasistencia,
 }: {
   tiquete: Tiquete;
   viaje: ViajeResumen | null;
@@ -88,9 +90,12 @@ function ModalDetalleCliente({
   onDescargarPdf: (t: Tiquete) => void;
   descargandoPdfId: number | null;
   onReprogramar: (t: Tiquete) => void;
+  onLiberarInasistencia: (t: Tiquete) => void;
+  liberandoInasistencia: boolean;
 }) {
   const descargando = descargandoPdfId === tiquete.idtiquete;
   const esValido = Boolean(tiquete.validado);
+  const [confirmandoLiberar, setConfirmandoLiberar] = useState(false);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -372,6 +377,75 @@ function ModalDetalleCliente({
               </div>
             </div>
           </div>
+
+          {/* Confirmación de liberación por inasistencia */}
+          {confirmandoLiberar && (
+            <div
+              style={{
+                borderRadius: '14px',
+                border: '1px solid #fecaca',
+                background: '#fef2f2',
+                padding: '14px 16px',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '12px' }}>
+                <span className="material-symbols-outlined" style={{ color: '#c62828', fontSize: '20px', flexShrink: 0 }}>
+                  person_off
+                </span>
+                <div>
+                  <p style={{ fontSize: '13px', fontWeight: 800, color: '#991b1b', margin: '0 0 3px' }}>
+                    ¿Liberar el Asiento #{tiquete.numeroasiento} por inasistencia?
+                  </p>
+                  <p style={{ fontSize: '12px', color: '#7f1d1d', margin: 0, lineHeight: 1.4 }}>
+                    El pasajero no se presentó a tiempo. El asiento quedará <strong>LIBRE</strong> inmediatamente para que la empresa pueda revenderlo en taquilla o plataforma.
+                  </p>
+                </div>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => setConfirmandoLiberar(false)}
+                  disabled={liberandoInasistencia}
+                  style={{
+                    padding: '7px 14px',
+                    borderRadius: '9px',
+                    border: '1px solid #cbd5e1',
+                    background: '#ffffff',
+                    color: '#475569',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onLiberarInasistencia(tiquete)}
+                  disabled={liberandoInasistencia}
+                  style={{
+                    padding: '7px 14px',
+                    borderRadius: '9px',
+                    border: 'none',
+                    background: '#c62828',
+                    color: '#ffffff',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    cursor: liberandoInasistencia ? 'not-allowed' : 'pointer',
+                    opacity: liberandoInasistencia ? 0.65 : 1,
+                  }}
+                >
+                  <span className={`material-symbols-outlined ${liberandoInasistencia ? 'animate-spin' : ''}`} style={{ fontSize: '15px' }}>
+                    {liberandoInasistencia ? 'progress_activity' : 'event_seat'}
+                  </span>
+                  <span>{liberandoInasistencia ? 'Liberando...' : 'Sí, liberar para reventa'}</span>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Acciones */}
@@ -392,18 +466,18 @@ function ModalDetalleCliente({
             onClick={() => onDescargarPdf(tiquete)}
             disabled={!tiquete.urlpdf || descargando}
             style={{
-              flex: '1 1 170px',
-              padding: '10px 16px',
+              flex: '1 1 155px',
+              padding: '10px 14px',
               borderRadius: '11px',
               border: 'none',
-              background: '#c62828',
+              background: '#0e3a8c',
               color: '#ffffff',
-              fontSize: '12.5px',
+              fontSize: '12px',
               fontWeight: 700,
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '8px',
+              gap: '7px',
               cursor: !tiquete.urlpdf || descargando ? 'not-allowed' : 'pointer',
               opacity: !tiquete.urlpdf || descargando ? 0.55 : 1,
             }}
@@ -412,7 +486,7 @@ function ModalDetalleCliente({
             <span className={`material-symbols-outlined ${descargando ? 'animate-spin' : ''}`} style={{ fontSize: '17px' }}>
               {descargando ? 'progress_activity' : 'download'}
             </span>
-            <span>{descargando ? 'Generando PDF...' : 'Descargar Tiquete'}</span>
+            <span>{descargando ? 'Generando PDF...' : 'Descargar PDF'}</span>
           </button>
 
           <button
@@ -422,12 +496,12 @@ function ModalDetalleCliente({
               onReprogramar(tiquete);
             }}
             style={{
-              padding: '10px 16px',
+              padding: '10px 14px',
               borderRadius: '11px',
               border: '1px solid #f59e0b',
               background: '#fffbeb',
               color: '#92400e',
-              fontSize: '12.5px',
+              fontSize: '12px',
               fontWeight: 700,
               display: 'inline-flex',
               alignItems: 'center',
@@ -440,18 +514,42 @@ function ModalDetalleCliente({
             <span>Reprogramar</span>
           </button>
 
+          <button
+            type="button"
+            onClick={() => setConfirmandoLiberar(true)}
+            disabled={liberandoInasistencia}
+            style={{
+              padding: '10px 14px',
+              borderRadius: '11px',
+              border: '1px solid #fecaca',
+              background: '#fef2f2',
+              color: '#c62828',
+              fontSize: '12px',
+              fontWeight: 700,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              cursor: 'pointer',
+            }}
+            title="Liberar el asiento para poder revenderlo porque el pasajero no asistió a tiempo"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: '17px' }}>person_off</span>
+            <span>No asistió (Liberar)</span>
+          </button>
+
           {!esValido && (
             <button
               type="button"
               onClick={() => onValidar(tiquete)}
               disabled={validando}
               style={{
-                padding: '10px 16px',
+                padding: '10px 14px',
                 borderRadius: '11px',
                 border: 'none',
-                background: '#0e3a8c',
+                background: '#16a34a',
                 color: '#ffffff',
-                fontSize: '12.5px',
+                fontSize: '12px',
                 fontWeight: 700,
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -495,6 +593,7 @@ export const GestionTiquetesPage = () => {
   const [tiqueteDetalle, setTiqueteDetalle] = useState<Tiquete | null>(null);
   const [tiqueteReprogramar, setTiqueteReprogramar] = useState<Tiquete | null>(null);
   const [validando, setValidando] = useState(false);
+  const [liberandoInasistencia, setLiberandoInasistencia] = useState(false);
   const [descargandoPdfId, setDescargandoPdfId] = useState<number | null>(null);
   const [toast, setToast] = useState<{ tipo: 'ok' | 'error'; texto: string } | null>(null);
 
@@ -620,6 +719,31 @@ export const GestionTiquetesPage = () => {
       setTiqueteReprogramar(null);
       mostrarToast('ok', mensaje);
       if (viajeSeleccionado) handleAbrirDetalleViaje(viajeSeleccionado, filtroPasajero);
+    },
+    [viajeSeleccionado, filtroPasajero, handleAbrirDetalleViaje, mostrarToast]
+  );
+
+  const handleLiberarInasistencia = useCallback(
+    async (t: Tiquete) => {
+      setLiberandoInasistencia(true);
+      try {
+        await taquillaApiService.liberarAsientoInasistencia(t.idtiquete);
+        setTiqueteDetalle(null);
+        mostrarToast(
+          'ok',
+          `Asiento #${t.numeroasiento} liberado por inasistencia. Ya está disponible para revenderlo.`
+        );
+        if (viajeSeleccionado) {
+          await handleAbrirDetalleViaje(viajeSeleccionado, filtroPasajero);
+        }
+      } catch (err: any) {
+        mostrarToast(
+          'error',
+          err?.response?.data?.message || 'No se pudo liberar el asiento por inasistencia.'
+        );
+      } finally {
+        setLiberandoInasistencia(false);
+      }
     },
     [viajeSeleccionado, filtroPasajero, handleAbrirDetalleViaje, mostrarToast]
   );
@@ -1677,6 +1801,8 @@ export const GestionTiquetesPage = () => {
           onDescargarPdf={handleDescargarPdf}
           descargandoPdfId={descargandoPdfId}
           onReprogramar={setTiqueteReprogramar}
+          onLiberarInasistencia={handleLiberarInasistencia}
+          liberandoInasistencia={liberandoInasistencia}
         />
       )}
 
