@@ -13,6 +13,7 @@ import { wompiApi } from '../../../infrastructure/api/wompiApi';
 import busCootranar from '../../../assets/busCootranar.png';
 import { WompiCheckout } from '../../components/pago/WompiCheckout';
 import { FormularioCompletarPerfil } from '../../components/pago/FormularioCompletarPerfil';
+import { ModalVincularCuenta, type DatosVinculacion } from '../../components/pago/ModalVincularCuenta';
 import { usePreferencias } from '../../context/PreferenciasContext';
 import {
   millasApi,
@@ -128,6 +129,9 @@ export function SeleccionAsientosPage() {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  // Cédula ya registrada en otra cuenta: ofrecer vincularla
+  const [vinculacion, setVinculacion] = useState<DatosVinculacion | null>(null);
+  const [avisoMsg, setAvisoMsg] = useState<string | null>(null);
   const [iniciandoPago, setIniciandoPago] = useState(false);
 
   const [puntosResueltos, setPuntosResueltos] = useState<{ idPuntoOrigen: number | null; idPuntoDestino: number | null }>({
@@ -763,7 +767,13 @@ export function SeleccionAsientosPage() {
               }));
             }
           } catch (err: any) {
-            const msg = err?.response?.data?.message ?? 'Error al guardar los datos del perfil. Intenta de nuevo.';
+            const data = err?.response?.data;
+            if ((data?.code ?? data?.codigo) === 'DOCUMENTO_DE_OTRA_CUENTA') {
+              setVinculacion(data?.datos ?? { documento: p.documento });
+              setIniciandoPago(false);
+              return;
+            }
+            const msg = data?.message ?? 'Error al guardar los datos del perfil. Intenta de nuevo.';
             setErrorMsg(msg);
             setIniciandoPago(false);
             return; // no continuar al pago
@@ -1452,6 +1462,12 @@ export function SeleccionAsientosPage() {
                     <span>{errorMsg}</span>
                   </div>
                 )}
+                {avisoMsg && (
+                  <div className="mt-4 flex items-start gap-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-800 dark:text-green-300 rounded-xl px-4 py-3 text-sm">
+                    <span className="material-symbols-outlined text-base shrink-0 mt-0.5">check_circle</span>
+                    <span>{avisoMsg}</span>
+                  </div>
+                )}
 
                 {/* Botón confirmar según método o Widget Wompi */}
                 <div className="mt-6">
@@ -1507,10 +1523,24 @@ export function SeleccionAsientosPage() {
            Solo se muestra como fallback cuando el usuario NO marcó "Yo soy este pasajero".
            Si sí lo marcó (usarMisDatosIdx !== null), el perfil ya se completó
            automáticamente en handleConfirmarYPagar antes de llamar iniciarPago. */}
-      {fase === 'formulario' && usarMisDatosIdx === null && (
+      {fase === 'formulario' && usarMisDatosIdx === null && !vinculacion && (
         <FormularioCompletarPerfil
           onCompletado={completarPerfil}
-          errorExterno={errorPago?.mensaje ?? null}
+          errorExterno={errorPago?.codigo === 'DOCUMENTO_DE_OTRA_CUENTA' ? null : (errorPago?.mensaje ?? null)}
+        />
+      )}
+
+      {/* La cédula ya pertenece a otra cuenta: vincular verificando con código al correo */}
+      {(vinculacion || (fase === 'formulario' && errorPago?.codigo === 'DOCUMENTO_DE_OTRA_CUENTA')) && (
+        <ModalVincularCuenta
+          datos={vinculacion ?? errorPago?.datos ?? { documento: '' }}
+          onCerrar={() => { setVinculacion(null); resetear(); }}
+          onVinculado={() => {
+            setVinculacion(null);
+            resetear();
+            setErrorMsg(null);
+            setAvisoMsg('¡Cuentas vinculadas! Ahora tus viajes y millas están en una sola cuenta. Presiona pagar para continuar.');
+          }}
         />
       )}
     </div>

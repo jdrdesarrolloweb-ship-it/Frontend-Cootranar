@@ -7,6 +7,8 @@ export interface ErrorPago {
   mensaje: string;
   codigo?: string;
   status?: number;
+  /** Datos extra del error (p. ej. DOCUMENTO_DE_OTRA_CUENTA trae documento y correo enmascarado). */
+  datos?: any;
 }
 
 interface UseWompiPagoReturn {
@@ -123,8 +125,9 @@ function extraerError(err: unknown): ErrorPago {
     const status = axiosError.response?.status;
     return {
       mensaje: data?.message || 'Error al procesar el pago',
-      codigo: data?.codigo,
+      codigo: data?.codigo ?? data?.code,
       status,
+      datos: data?.datos,
     };
   }
   if (err instanceof Error) {
