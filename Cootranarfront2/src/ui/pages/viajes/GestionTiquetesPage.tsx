@@ -514,6 +514,8 @@ function ModalDetalleCliente({
             <span>Reprogramar</span>
           </button>
 
+          {/* Un pasajero ya validado como abordado no puede marcarse como inasistencia */}
+          {!esValido && (
           <button
             type="button"
             onClick={() => setConfirmandoLiberar(true)}
@@ -537,6 +539,7 @@ function ModalDetalleCliente({
             <span className="material-symbols-outlined" style={{ fontSize: '17px' }}>person_off</span>
             <span>No asistió (Liberar)</span>
           </button>
+          )}
 
           {!esValido && (
             <button
@@ -674,13 +677,16 @@ export const GestionTiquetesPage = () => {
     async (t: Tiquete) => {
       setValidando(true);
       try {
+        // Antes solo se marcaba en pantalla y no se guardaba: ahora se registra el abordaje
+        // en el backend, que además acredita las millas del pasajero.
+        const res = await taquillaApiService.validarAbordaje(t.idtiquete);
         setTiquetes((prev) =>
           prev.map((tk) => (tk.idtiquete === t.idtiquete ? { ...tk, validado: true } : tk))
         );
         setTiqueteDetalle((prev) =>
           prev && prev.idtiquete === t.idtiquete ? { ...prev, validado: true } : prev
         );
-        mostrarToast('ok', `Reserva del asiento #${t.numeroasiento} validada exitosamente.`);
+        mostrarToast('ok', res.data?.message || `Abordaje del asiento #${t.numeroasiento} validado.`);
       } catch (err: any) {
         mostrarToast('error', err?.response?.data?.message || 'No se pudo validar la reserva.');
       } finally {

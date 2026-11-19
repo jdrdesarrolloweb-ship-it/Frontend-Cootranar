@@ -124,6 +124,13 @@ export const taquillaApiService = {
       `/taquilla/tiquetes/${idTiquete}/liberar-inasistencia`
     );
   },
+
+  /** Registra que el pasajero abordó; el backend acredita sus millas en ese momento. */
+  validarAbordaje: (idTiquete: number) => {
+    return httpClient.post<{ success: boolean; message: string; data: any }>(
+      `/taquilla/tiquetes/${idTiquete}/validar`
+    );
+  },
 };
 
 export default taquillaApiService;
