@@ -109,6 +109,8 @@ export const RutasPage = () => {
   const [distancia, setDistancia] = useState('');
   const [via, setVia] = useState('');
   const [puntos, setPuntos] = useState<PuntoIntermedio[]>([]);
+  const [origenPuntoId, setOrigenPuntoId] = useState<number | null>(null);
+  const [destinoPuntoId, setDestinoPuntoId] = useState<number | null>(null);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formMsg, setFormMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
@@ -149,6 +151,7 @@ export const RutasPage = () => {
     setNombre(''); setTiporuta('INTERMUNICIPAL'); setOrigenId(''); setDestinoId('');
     setDuracionh(''); setDuracionm(''); setDistancia(''); setVia('');
     setPuntos([]); setEditingId(null);
+    setOrigenPuntoId(null); setDestinoPuntoId(null);
   };
 
   const startEdit = async (r: Ruta) => {
@@ -165,11 +168,18 @@ export const RutasPage = () => {
     try {
       const res = await rutasApi.obtenerPuntos(r.id);
       const todosLosPuntos = res.data?.puntos || res.data?.data?.puntos || [];
+      const pOrigen = todosLosPuntos.find((p: any) => p.orden === 0);
+      const maxOrden = Math.max(0, ...todosLosPuntos.map((x: any) => x.orden));
+      const pDestino = todosLosPuntos.find((p: any) => p.orden === maxOrden && p.orden !== 0);
+      setOrigenPuntoId(pOrigen?.idpuntoruta ?? null);
+      setDestinoPuntoId(pDestino?.idpuntoruta ?? null);
+
       const intermedios = todosLosPuntos
-        .filter((p: any) => p.orden !== 0 && p.orden !== Math.max(...todosLosPuntos.map((x: any) => x.orden)))
+        .filter((p: any) => p.orden !== 0 && p.orden !== maxOrden)
         .sort((a: any, b: any) => a.orden - b.orden)
         .map((p: any) => ({
           _id: nextTempId++,
+          idpuntoruta: p.idpuntoruta,
           nombre: p.idagencia ? '' : p.nombre,
           esAgencia: !!p.idagencia,
           idagencia: p.idagencia ? p.idagencia.toString() : null,
@@ -189,6 +199,7 @@ export const RutasPage = () => {
     if (!origenAg || !destinoAg) return null;
 
     const intermedios = puntos.map((p, i) => ({
+      idpuntoruta: p.idpuntoruta,
       nombre: p.esAgencia ? (agenciasList.find((a: any) => a.idagencia === parseInt(p.idagencia || ''))?.nombre || '') : p.nombre,
       idagencia: p.esAgencia ? (parseInt(p.idagencia || '') || null) : null,
       orden: i + 1,
@@ -197,9 +208,9 @@ export const RutasPage = () => {
     }));
 
     return [
-      { nombre: origenAg.nombre, idagencia: origenAg.idagencia, orden: 0, tiempodesdeanteriorth: 0, tiempodesdeanteriorm: 0 },
+      { idpuntoruta: origenPuntoId ?? undefined, nombre: origenAg.nombre, idagencia: origenAg.idagencia, orden: 0, tiempodesdeanteriorth: 0, tiempodesdeanteriorm: 0 },
       ...intermedios,
-      { nombre: destinoAg.nombre, idagencia: destinoAg.idagencia, orden: intermedios.length + 1, tiempodesdeanteriorth: 0, tiempodesdeanteriorm: 0 },
+      { idpuntoruta: destinoPuntoId ?? undefined, nombre: destinoAg.nombre, idagencia: destinoAg.idagencia, orden: intermedios.length + 1, tiempodesdeanteriorth: 0, tiempodesdeanteriorm: 0 },
     ];
   };
 

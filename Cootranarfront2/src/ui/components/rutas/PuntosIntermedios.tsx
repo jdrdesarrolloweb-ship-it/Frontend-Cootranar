@@ -4,6 +4,7 @@ const BLUE = '#0D3B8E';
 
 export interface PuntoIntermedio {
   _id: number;
+  idpuntoruta?: number;
   nombre: string;
   esAgencia: boolean;
   idagencia: string | null;
