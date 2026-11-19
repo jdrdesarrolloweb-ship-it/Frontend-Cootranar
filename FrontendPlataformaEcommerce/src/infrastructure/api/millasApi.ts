@@ -40,6 +40,9 @@ export interface MillasResumen {
   usuario: UsuarioMillasInfo;
   saldoMillas: number;
   valorEquivalenteCop: number;
+  /** Millas estimadas de viajes comprados que aún no se han realizado. */
+  millasPendientes?: number;
+  viajesPendientes?: number;
   nivel: NivelInfo;
   siguienteNivel: SiguienteNivelInfo | null;
   estadisticas: EstadisticasMillas;
@@ -243,7 +246,9 @@ export const millasApi = {
     codigoCupon?: string;
     usarDescuentoMillas?: boolean;
   }): Promise<ResultadoCompraMillas> {
-    const res = await httpClient.post<{ success: boolean; data: ResultadoCompraMillas }>('/millas/comprar-viaje', payload);
+    // ms-pagos emite los tiquetes y debita las millas vía Saga con el servicio de millas
+    const { idViaje, asientos, codigoCupon } = payload;
+    const res = await httpClient.post<{ success: boolean; data: ResultadoCompraMillas }>('/wompi/comprar-con-millas', { idViaje, asientos, codigoCupon });
     return res.data.data;
   },
 };

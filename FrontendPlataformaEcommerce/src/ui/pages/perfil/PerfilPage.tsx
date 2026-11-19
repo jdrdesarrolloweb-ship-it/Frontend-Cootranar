@@ -597,8 +597,8 @@ export function PerfilPage() {
                       <span className="material-symbols-outlined text-sm text-amber-300">verified</span>
                       <span>
                         {idioma === 'es'
-                          ? `Acumulas 1 milla por cada $${Number(configMillas?.pesosPorMilla ?? 100).toLocaleString('es-CO')} COP en tiquetes`
-                          : `Earn 1 mile for every $${Number(configMillas?.pesosPorMilla ?? 100).toLocaleString('es-CO')} COP spent on tickets`}
+                          ? `Acumulas 1 milla por cada $${Number(configMillas?.pesosPorMilla ?? 500).toLocaleString('es-CO')} COP en tiquetes`
+                          : `Earn 1 mile for every $${Number(configMillas?.pesosPorMilla ?? 500).toLocaleString('es-CO')} COP spent on tickets`}
                       </span>
                     </div>
                     <button

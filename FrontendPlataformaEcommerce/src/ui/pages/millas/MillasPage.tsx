@@ -103,19 +103,22 @@ export function MillasPage() {
         const est = await millasApi.calcularEstimado(montoSimulado);
         setEstimado(est);
       } catch {
-        // Fallback local
-        const base = Math.floor(montoSimulado / 100);
+        // Fallback local con las reglas configuradas (antes asumía fijo $100 = 1 milla)
+        const pesos = Math.max(configPrograma?.pesosPorMilla || 500, 1);
+        const valor = configPrograma?.valorMillaCop || 10;
+        const aplicaMult = configPrograma?.aplicaMultiplicadorNivel ?? false;
+        const base = Math.floor(montoSimulado / pesos);
+        const fila = (nivel: string, mult: number) => {
+          const efectivo = aplicaMult ? mult : 1.0;
+          const millas = Math.floor(base * efectivo);
+          return { nivel, multiplicador: efectivo, millasConMultiplicador: millas, descuentoFuturoCop: millas * valor };
+        };
         setEstimado({
           montoCop: montoSimulado,
           millasBase: base,
-          porcentajeRetorno: '10%',
-          equivalenciaDescuentoCop: base * 10,
-          nivelesEstimados: [
-            { nivel: 'Bronce', multiplicador: 1.0, millasConMultiplicador: base, descuentoFuturoCop: base * 10 },
-            { nivel: 'Plata', multiplicador: 1.1, millasConMultiplicador: Math.floor(base * 1.1), descuentoFuturoCop: Math.floor(base * 1.1) * 10 },
-            { nivel: 'Oro', multiplicador: 1.25, millasConMultiplicador: Math.floor(base * 1.25), descuentoFuturoCop: Math.floor(base * 1.25) * 10 },
-            { nivel: 'Platino VIP', multiplicador: 1.5, millasConMultiplicador: Math.floor(base * 1.5), descuentoFuturoCop: Math.floor(base * 1.5) * 10 },
-          ]
+          porcentajeRetorno: `${Math.round((valor / pesos) * 1000) / 10}%`,
+          equivalenciaDescuentoCop: base * valor,
+          nivelesEstimados: [fila('Bronce', 1.0), fila('Plata', 1.1), fila('Oro', 1.25), fila('Platino VIP', 1.5)]
         });
       } finally {
         setCalculandoSimulador(false);
@@ -426,6 +429,15 @@ export function MillasPage() {
               etiquetaSocio={m.socioNum}
             />
 
+            {(resumen?.millasPendientes ?? 0) > 0 && (
+              <p className="mt-3 text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-sm">schedule</span>
+                {idioma === 'es'
+                  ? `+${formatNum(resumen?.millasPendientes)} millas pendientes: se acreditan cuando realices tu${(resumen?.viajesPendientes ?? 0) > 1 ? 's' : ''} viaje${(resumen?.viajesPendientes ?? 0) > 1 ? 's' : ''}.`
+                  : `+${formatNum(resumen?.millasPendientes)} pending miles: credited after you travel.`}
+              </p>
+            )}
+
             {/* Botón Oficial Agregar a Google Wallet */}
             <div className="mt-3.5 flex flex-col items-center">
               <button
@@ -552,10 +564,13 @@ export function MillasPage() {
 
               <div>
                 <span className="text-2xl sm:text-3xl font-black text-[#131b3e] dark:text-white tracking-tight">
-                  {resumen?.nivel.multiplicador}x <span className="text-xs font-bold text-slate-400">{idioma === 'es' ? 'en tus viajes' : 'on your trips'}</span>
+                  {/* Solo se muestra el multiplicador del nivel si el programa lo tiene activado */}
+                  {configPrograma?.aplicaMultiplicadorNivel ? (resumen?.nivel.multiplicador ?? 1) : 1}x <span className="text-xs font-bold text-slate-400">{idioma === 'es' ? 'en tus viajes' : 'on your trips'}</span>
                 </span>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                  {idioma === 'es' ? `Nivel ${resumen?.nivel.nombre}: acumulas más rápido` : `${resumen?.nivel.nombre} Tier: earn points faster`}
+                  {configPrograma?.aplicaMultiplicadorNivel && (resumen?.nivel.multiplicador ?? 1) > 1
+                    ? (idioma === 'es' ? `Nivel ${resumen?.nivel.nombre}: acumulas más rápido` : `${resumen?.nivel.nombre} Tier: earn points faster`)
+                    : (idioma === 'es' ? 'Acumulación base en todos los niveles' : 'Base earning on all tiers')}
                 </p>
               </div>
             </div>
@@ -573,7 +588,7 @@ export function MillasPage() {
 
               <div>
                 <span className="text-2xl sm:text-3xl font-black text-[#131b3e] dark:text-white tracking-tight">
-                  {resumen?.estadisticas.bonoBienvenida || 150} <span className="text-xs font-bold text-slate-400">pts</span>
+                  {resumen?.estadisticas.bonoBienvenida ?? 0} <span className="text-xs font-bold text-slate-400">pts</span>
                 </span>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                   {idioma === 'es' ? 'Bono otorgado por ser cliente registrado' : 'Welcome reward for being a member'}
@@ -637,9 +652,9 @@ export function MillasPage() {
                 />
               </div>
               <p className="text-[11px] text-blue-200">
-                {idioma === 'es' 
-                  ? 'Por cada $100 COP gastados ganas 1 milla base. ¡Multiplica tus millas según tu nivel VIP!'
-                  : 'For every $100 COP spent you earn 1 base mile. Multiply your points according to your VIP tier!'}
+                {idioma === 'es'
+                  ? `Por cada $${(configPrograma?.pesosPorMilla || 500).toLocaleString('es-CO')} COP gastados ganas 1 milla base.${configPrograma?.aplicaMultiplicadorNivel ? ' ¡Multiplica tus millas según tu nivel VIP!' : ''}`
+                  : `For every $${(configPrograma?.pesosPorMilla || 500).toLocaleString('es-CO')} COP spent you earn 1 base mile.${configPrograma?.aplicaMultiplicadorNivel ? ' Multiply your points according to your VIP tier!' : ''}`}
               </p>
             </div>
 
@@ -937,7 +952,7 @@ export function MillasPage() {
                 multiplicador: 1.0,
                 descuentoTiquetes: '0%',
                 beneficios: [
-                  '1 milla por cada $100 COP gastados',
+                  `1 milla por cada $${(configPrograma?.pesosPorMilla || 500).toLocaleString('es-CO')} COP gastados`,
                   'Acceso a promociones y tarifas especiales',
                   'Gestión digital y descarga de pasajes'
                 ]
@@ -1020,7 +1035,7 @@ export function MillasPage() {
                         {formatNum(nv.minMillas)} {!nv.maxMillas || !isFinite(nv.maxMillas) ? '+' : `- ${formatNum(nv.maxMillas)}`} millas
                       </span>
                       <span className="text-xl font-black text-[#131b3e] dark:text-white">
-                        {nv.multiplicador}x <span className="text-xs font-semibold text-slate-400">acumulación</span>
+                        {configPrograma?.aplicaMultiplicadorNivel ? nv.multiplicador : 1}x <span className="text-xs font-semibold text-slate-400">acumulación</span>
                       </span>
                     </div>
 

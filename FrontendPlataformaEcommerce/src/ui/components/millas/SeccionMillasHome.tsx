@@ -65,7 +65,7 @@ export function SeccionMillasHome() {
 
   if (!cargando && (niveles.length === 0 || config?.programaActivo === false)) return null;
 
-  const pesosPorMilla = config?.pesosPorMilla ?? 100;
+  const pesosPorMilla = config?.pesosPorMilla ?? 500;
   const valorMilla = config?.valorMillaCop ?? 10;
   const bono = config?.bonoBienvenida ?? 0;
   const retornoBase = Math.round((valorMilla / pesosPorMilla) * 1000) / 10; // %
