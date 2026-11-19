@@ -5,7 +5,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { usePreferencias } from '../../context/PreferenciasContext';
 import { millasApi, type MillasResumen, type MovimientoMilla, type NivelBeneficio, type EstimadoMillas, type RecompensaCatalogo, type ConfiguracionPublicaMillas, type CuponMillas } from '../../../infrastructure/api/millasApi';
 import { ROUTES } from '../../../shared/constants';
-import logoImg from '../../../assets/Logo.png.png';
+import { TarjetaMembresiaCootranar } from '../../components/millas/TarjetaMembresiaCootranar';
 
 export function MillasPage() {
   const navigate = useNavigate();
@@ -177,54 +177,6 @@ export function MillasPage() {
     setCopiadoId(codigo);
     setTimeout(() => setCopiadoId(null), 2500);
   };
-
-  // Determinar estilos visuales de la tarjeta VIP con la paleta oficial de Cootranar (Rojo #c62828 y Azul #0e3a8c)
-  const getCardTheme = (nivelId: string = 'BRONCE') => {
-    switch (nivelId) {
-      case 'PLATINO':
-        return {
-          gradient: 'from-[#050c1e] via-[#0a1e45] to-[#040915]',
-          border: 'border-blue-400/50 shadow-xl shadow-blue-950/40',
-          accent: 'text-blue-300',
-          badge: 'bg-gradient-to-r from-blue-600 via-indigo-600 to-[#c62828] text-white border border-white/30 shadow-xs',
-          chip: 'from-amber-200 to-yellow-400',
-          glow1: 'bg-blue-500/25',
-          glow2: 'bg-[#c62828]/25'
-        };
-      case 'ORO':
-        return {
-          gradient: 'from-[#0e172a] via-[#1a233d] to-[#0a1224]',
-          border: 'border-amber-400/70 shadow-xl shadow-amber-950/30',
-          accent: 'text-amber-300',
-          badge: 'bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 text-slate-950 font-black border border-amber-300/80 shadow-xs',
-          chip: 'from-amber-200 to-yellow-500',
-          glow1: 'bg-amber-500/20',
-          glow2: 'bg-[#c62828]/25'
-        };
-      case 'PLATA':
-        return {
-          gradient: 'from-[#0d182b] via-[#162744] to-[#091222]',
-          border: 'border-slate-300/60 shadow-xl shadow-slate-950/30',
-          accent: 'text-slate-200',
-          badge: 'bg-gradient-to-r from-slate-200 to-slate-300 text-slate-900 font-black border border-white/70 shadow-xs',
-          chip: 'from-slate-200 to-slate-400',
-          glow1: 'bg-slate-300/20',
-          glow2: 'bg-[#0e3a8c]/40'
-        };
-      default: // BRONCE (Identidad Institucional Cootranar: Azul Marino y Rojo Corporativo)
-        return {
-          gradient: 'from-[#0a1c3d] via-[#102b5c] to-[#07152f]',
-          border: 'border-red-500/40 shadow-xl shadow-red-950/20',
-          accent: 'text-red-300',
-          badge: 'bg-gradient-to-r from-[#c62828] to-[#b71c1c] text-white font-black border border-red-400/60 shadow-xs',
-          chip: 'from-amber-300 to-yellow-500',
-          glow1: 'bg-[#c62828]/25',
-          glow2: 'bg-[#0e3a8c]/40'
-        };
-    }
-  };
-
-  const cardTheme = getCardTheme(resumen?.nivel.id);
 
   if (cargando) {
     return (
@@ -442,76 +394,16 @@ export function MillasPage() {
           
           {/* ── Columna Izquierda: Tarjeta de Membresía Digital VIP Cootranar ── */}
           <div className="lg:col-span-5 flex flex-col">
-            <div className={`relative overflow-hidden rounded-3xl p-6 sm:p-7 bg-gradient-to-br ${cardTheme.gradient} border ${cardTheme.border} text-white shadow-2xl shadow-slate-900/20 flex flex-col justify-between min-h-[250px] sm:min-h-[270px]`}>
-              
-              {/* Efectos de brillo de fondo en Rojo Cootranar y Azul Institucional */}
-              <div className={`absolute -top-24 -right-24 w-64 h-64 ${cardTheme.glow1} rounded-full blur-3xl pointer-events-none`} />
-              <div className={`absolute -bottom-24 -left-24 w-64 h-64 ${cardTheme.glow2} rounded-full blur-3xl pointer-events-none`} />
-              
-              {/* Franja decorativa sutil en la tarjeta */}
-              <div className="absolute top-0 right-0 w-32 h-full bg-gradient-to-l from-white/5 to-transparent pointer-events-none" />
-
-              {/* Header de la tarjeta con Logo Oficial Cootranar */}
-              <div className="flex items-center justify-between relative z-10">
-                <div className="flex items-center gap-3">
-                  <div className="bg-white/95 rounded-xl px-2.5 py-1.5 shadow-md flex items-center justify-center">
-                    <img src={logoImg} alt="Cootranar" className="h-6 sm:h-7 w-auto object-contain" />
-                  </div>
-                  <div>
-                    <span className="text-[10px] tracking-widest font-black uppercase text-red-300 block drop-shadow-xs">
-                      COOTRANAR FREQUENT TRAVELER
-                    </span>
-                    <span className="text-xs font-bold text-white/95 tracking-wide">
-                      Club Pasajero VIP
-                    </span>
-                  </div>
-                </div>
-
-                <span className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider ${cardTheme.badge}`}>
-                  {resumen?.nivel.nombre || 'Bronce'}
-                </span>
-              </div>
-
-              {/* Chip virtual e Info Central */}
-              <div className="my-6 relative z-10 flex items-center justify-between">
-                <div className={`w-12 h-9 rounded-md bg-gradient-to-br ${cardTheme.chip} p-1 shadow-inner flex items-center justify-center opacity-95 border border-amber-200/50`}>
-                  <div className="w-full h-full border border-black/25 rounded-xs grid grid-cols-2 gap-0.5 opacity-60">
-                    <div className="border-r border-black/25" />
-                    <div className="border-l border-black/25" />
-                  </div>
-                </div>
-
-                <div className="text-right">
-                  <span className="text-[10px] uppercase font-bold text-slate-300 block tracking-widest">
-                    {m.saldoActual}
-                  </span>
-                  <span className="text-3xl sm:text-4xl font-black text-white tracking-tight">
-                    {formatNum(resumen?.saldoMillas)} <span className="text-base sm:text-lg font-black text-amber-300">pts</span>
-                  </span>
-                </div>
-              </div>
-
-              {/* Footer de la tarjeta */}
-              <div className="relative z-10 pt-2 border-t border-white/15 flex items-end justify-between">
-                <div>
-                  <span className="text-[10px] uppercase font-semibold text-slate-300 block tracking-wider">
-                    {idioma === 'es' ? 'Titular de la Membresía' : 'Cardholder'}
-                  </span>
-                  <span className="text-sm font-black uppercase tracking-wider text-white">
-                    {resumen?.usuario.nombre} {resumen?.usuario.apellido}
-                  </span>
-                </div>
-
-                <div className="text-right">
-                  <span className="text-[10px] uppercase font-semibold text-slate-300 block tracking-wider">
-                    {m.socioNum}
-                  </span>
-                  <span className="text-xs font-mono font-bold tracking-widest text-slate-200">
-                    {resumen?.usuario.numeroSocio}
-                  </span>
-                </div>
-              </div>
-            </div>
+            <TarjetaMembresiaCootranar
+              nivelId={resumen?.nivel.id}
+              nivelNombre={resumen?.nivel.nombre || 'Bronce'}
+              saldoMillasFormateado={formatNum(resumen?.saldoMillas)}
+              titular={`${resumen?.usuario.nombre || ''} ${resumen?.usuario.apellido || ''}`.trim() || 'SOCIO COOTRANAR'}
+              numeroSocio={resumen?.usuario.numeroSocio || 'CTN-000000'}
+              etiquetaMillas={m.saldoActual}
+              etiquetaTitular={idioma === 'es' ? 'Titular' : 'Cardholder'}
+              etiquetaSocio={m.socioNum}
+            />
 
             {/* Barra de Progreso hacia el siguiente nivel */}
             {resumen?.siguienteNivel ? (
