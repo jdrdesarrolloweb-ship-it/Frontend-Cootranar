@@ -36,6 +36,8 @@ export function MillasPage() {
     saldoRestante: number;
   } | null>(null);
   const [copiadoId, setCopiadoId] = useState<string | null>(null);
+  const [cargandoWallet, setCargandoWallet] = useState(false);
+  const [errorWallet, setErrorWallet] = useState<string | null>(null);
 
   // Estados de la calculadora interactiva
   const [montoSimulado, setMontoSimulado] = useState<number>(45000);
@@ -176,6 +178,25 @@ export function MillasPage() {
     navigator.clipboard.writeText(codigo);
     setCopiadoId(codigo);
     setTimeout(() => setCopiadoId(null), 2500);
+  };
+
+  const handleAgregarGoogleWallet = async () => {
+    setCargandoWallet(true);
+    setErrorWallet(null);
+    try {
+      const { saveUrl } = await millasApi.obtenerEnlaceGoogleWallet();
+      window.open(saveUrl, '_blank', 'noopener,noreferrer');
+    } catch (err: any) {
+      setErrorWallet(
+        err?.response?.data?.message ||
+          (idioma === 'es'
+            ? 'No se pudo generar la tarjeta para Google Wallet.'
+            : 'Could not generate Google Wallet pass.')
+      );
+      setTimeout(() => setErrorWallet(null), 5000);
+    } finally {
+      setCargandoWallet(false);
+    }
   };
 
   if (cargando) {
@@ -404,6 +425,43 @@ export function MillasPage() {
               etiquetaTitular={idioma === 'es' ? 'Titular' : 'Cardholder'}
               etiquetaSocio={m.socioNum}
             />
+
+            {/* Botón Oficial Agregar a Google Wallet */}
+            <div className="mt-3.5 flex flex-col items-center">
+              <button
+                type="button"
+                onClick={handleAgregarGoogleWallet}
+                disabled={cargandoWallet}
+                className="w-full h-12 rounded-full bg-[#1f1f1f] hover:bg-[#000000] active:scale-[0.99] disabled:opacity-70 text-white font-semibold text-sm px-5 border border-white/15 shadow-md hover:shadow-lg flex items-center justify-center gap-3 transition-all cursor-pointer"
+              >
+                {cargandoWallet ? (
+                  <>
+                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>{idioma === 'es' ? 'Generando tarjeta...' : 'Generating pass...'}</span>
+                  </>
+                ) : (
+                  <>
+                    {/* Ícono oficial Google Wallet */}
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <rect x="2" y="5" width="20" height="14" rx="3.5" fill="#4285F4" />
+                      <path d="M2 8.5C2 6.57 3.57 5 5.5 5H18.5C20.43 5 22 6.57 22 8.5V10H2V8.5Z" fill="#34A853" />
+                      <path d="M2 10H22V12.5H2V10Z" fill="#FBBC04" />
+                      <path d="M2 12.2H22V14.2H2V12.2Z" fill="#EA4335" />
+                      <path
+                        d="M2 11.5H9.2C9.8 11.5 10.4 11.8 10.8 12.3L11.5 13.2C11.8 13.6 12.2 13.8 12.7 13.8H22V15.5C22 17.43 20.43 19 18.5 19H5.5C3.57 19 2 17.43 2 15.5V11.5Z"
+                        fill="#4285F4"
+                      />
+                    </svg>
+                    <span>{idioma === 'es' ? 'Agregar a Google Wallet' : 'Add to Google Wallet'}</span>
+                  </>
+                )}
+              </button>
+              {errorWallet && (
+                <p className="mt-2 text-xs font-semibold text-red-600 dark:text-red-400 text-center">
+                  {errorWallet}
+                </p>
+              )}
+            </div>
 
             {/* Barra de Progreso hacia el siguiente nivel */}
             {resumen?.siguienteNivel ? (

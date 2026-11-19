@@ -194,6 +194,11 @@ export const millasApi = {
     return res.data.data;
   },
 
+  async obtenerEnlaceGoogleWallet(): Promise<{ saveUrl: string; objectId: string; classId: string }> {
+    const res = await httpClient.get<{ success: boolean; data: { saveUrl: string; objectId: string; classId: string } }>('/millas/wallet/google');
+    return res.data.data;
+  },
+
   async obtenerHistorial(): Promise<MovimientoMilla[]> {
     const res = await httpClient.get<{ success: boolean; data: MovimientoMilla[] }>('/millas/historial');
     return res.data.data;
