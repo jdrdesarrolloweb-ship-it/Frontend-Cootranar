@@ -139,6 +139,17 @@ export function SeleccionAsientosPage() {
   const asientosReservadosRef = useRef<Set<number>>(new Set());
   const asientosPendientesRef = useRef<Set<number>>(new Set());
 
+  const sincronizarReservasSesion = useCallback(() => {
+    if (!state?.idviaje) return;
+    const key = `cootranar_reservas_viaje_${state.idviaje}`;
+    const ids = Array.from(asientosReservadosRef.current);
+    if (ids.length === 0) {
+      sessionStorage.removeItem(key);
+    } else {
+      sessionStorage.setItem(key, JSON.stringify(ids));
+    }
+  }, [state?.idviaje]);
+
   // --- Estado de formularios de pasajeros ---
   const [pasajeros, setPasajeros] = useState<DatosPasajero[]>([]);
   const [erroresPasajeros, setErroresPasajeros] = useState<Record<number, Record<string, string>>>({});
@@ -227,6 +238,19 @@ export function SeleccionAsientosPage() {
 
         let idPuntoOrigen = state.idPuntoOrigen;
         let idPuntoDestino = state.idPuntoDestino;
+
+        // Si en esta sesión quedaron asientos reservados por un reload/back previo, liberarlos antes de cargar
+        const keyReservasSesion = `cootranar_reservas_viaje_${state.idviaje}`;
+        const reservasPreviasRaw = sessionStorage.getItem(keyReservasSesion);
+        if (reservasPreviasRaw) {
+          sessionStorage.removeItem(keyReservasSesion);
+          try {
+            const idsPrevios = JSON.parse(reservasPreviasRaw);
+            if (Array.isArray(idsPrevios) && idsPrevios.length > 0) {
+              await httpClient.post('/asientos/liberar-lote', { ids: idsPrevios }).catch(() => {});
+            }
+          } catch { /* silencioso */ }
+        }
 
         // Disparar detalle, tramo y asientos TODO EN PARALELO
         const detallePromise = httpClient.get<{ data: DetalleViaje }>(`/plataforma-ecommerce/viaje/${state.idviaje}/detalle`);
@@ -379,6 +403,7 @@ export function SeleccionAsientosPage() {
         const ids = Array.from(asientosReservadosRef.current);
         asientosReservadosRef.current.clear();
         asientosPendientesRef.current.clear();
+        sincronizarReservasSesion();
         setAsientosSeleccionados([]);
         setPasajeros([]);
         setUsarMisDatosIdx(null);
@@ -433,6 +458,7 @@ export function SeleccionAsientosPage() {
       const idxRemovido = asientosSeleccionados.findIndex(a => a.idasientoviaje === idLiberar);
       asientosReservadosRef.current.delete(idLiberar);
       asientosPendientesRef.current.delete(idLiberar);
+      sincronizarReservasSesion();
       setAsientosSeleccionados(prev => prev.filter(a => a.idasientoviaje !== idLiberar));
       // Eliminar el formulario en el índice correcto (no siempre el último)
       if (idxRemovido >= 0) {
@@ -482,6 +508,10 @@ export function SeleccionAsientosPage() {
       await httpClient.post(`/asientos/${asiento.idasientoviaje}/reservar`, undefined, { skipAuthRedirect: true });
       asientosReservadosRef.current.add(asiento.idasientoviaje);
       asientosPendientesRef.current.delete(asiento.idasientoviaje);
+      sincronizarReservasSesion();
+      setAsientos(prev => prev.map(a =>
+        a.idasientoviaje === asiento.idasientoviaje ? { ...a, estado: 'SELECCIONADO' as EstadoAsiento } : a
+      ));
       if (asientosReservadosRef.current.size === 1) iniciarCountdown(tiempoMaxMin);
     } catch (err: any) {
       asientosPendientesRef.current.delete(asiento.idasientoviaje);
@@ -517,6 +547,7 @@ export function SeleccionAsientosPage() {
     const idLiberar = asientoInfo.idasientoviaje;
     asientosReservadosRef.current.delete(idLiberar);
     asientosPendientesRef.current.delete(idLiberar);
+    sincronizarReservasSesion();
     setAsientosSeleccionados(prev => prev.filter((_, i) => i !== idx));
     setPasajeros(prev => {
       const copia = [...prev];
@@ -856,6 +887,7 @@ export function SeleccionAsientosPage() {
       // Limpiar refs para evitar que el cleanup libere asientos ya comprados
       asientosReservadosRef.current.clear();
       asientosPendientesRef.current.clear();
+      sincronizarReservasSesion();
 
       navigate(`${ROUTES.PAGO_RESULTADO}?status=APPROVED&reference=${res.referencia}`);
     } catch (err: any) {
@@ -872,7 +904,8 @@ export function SeleccionAsientosPage() {
     if (fase !== 'widget') return;
     asientosReservadosRef.current.clear();
     asientosPendientesRef.current.clear();
-  }, [fase]);
+    sincronizarReservasSesion();
+  }, [fase, sincronizarReservasSesion]);
 
   // Bug 2 fix (parte 2): cuando el backend rechaza la preparación del pago (cualquier error,
   // incluyendo PASAJERO_YA_EN_VIAJE), liberar TODOS los asientos reservados de inmediato.
@@ -882,6 +915,7 @@ export function SeleccionAsientosPage() {
     if (ids.length > 0) {
       asientosReservadosRef.current.clear();
       asientosPendientesRef.current.clear();
+      sincronizarReservasSesion();
       ids.forEach(id => {
         httpClient.post(`/asientos/${id}/liberar`).catch(() => {});
       });
