@@ -56,6 +56,7 @@ export const ROUTES = {
   ALMACEN_TRASLADOS: '/almacen/traslados',
   ALMACEN_CARTERA: '/almacen/cartera',
   ALMACEN_CONFIGURACION: '/almacen/configuracion',
+  BASE_DATOS: '/sistema/base-datos',
 } as const;
 
 export const ESTADOS_TIQUETE = {

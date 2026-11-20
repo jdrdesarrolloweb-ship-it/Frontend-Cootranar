@@ -156,6 +156,14 @@ const sections: NavSection[] = [
       { path: ROUTES.CONTENIDO_WEB, label: 'Contenido Web', icon: 'web', descripcion: 'Gestión de textos, carrusel, Quiénes Somos y páginas públicas del E-commerce.' },
     ],
   },
+  {
+    id: 'sistema',
+    title: 'Sistema',
+    icon: 'database',
+    items: [
+      { path: ROUTES.BASE_DATOS, label: 'Base de datos', icon: 'database', descripcion: 'Consultar, editar y eliminar registros de las tablas (con cascada) y limpiar la base de datos.' },
+    ],
+  },
 ];
 
 interface SidebarProps {
@@ -301,6 +309,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isLoading = false }) => {
   const filteredSections = sections
     .map((section) => {
       const items = section.items.filter((item) => {
+        // Administración de base de datos: solo administradores
+        if (item.path === ROUTES.BASE_DATOS) return user?.nombrerol === 'ADMINISTRADOR';
         if (user?.nombrerol === 'TAQUILLERO') {
           return (
             item.path === ROUTES.CAJA ||

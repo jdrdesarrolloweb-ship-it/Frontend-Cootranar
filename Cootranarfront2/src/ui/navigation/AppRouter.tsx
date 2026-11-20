@@ -53,6 +53,7 @@ import { TrasladosAlmacenPage } from '../pages/almacen/TrasladosAlmacenPage';
 import { CarteraSociosPage } from '../pages/almacen/CarteraSociosPage';
 import { ConfiguracionAlmacenPage } from '../pages/almacen/ConfiguracionAlmacenPage';
 import { PrivateRoute } from './PrivateRoute';
+import { BaseDatosPage } from '../pages/base-datos/BaseDatosPage';
 import { ErrorBoundary } from '../components/common/ErrorBoundary';
 import { ROUTES } from '../../shared/constants';
 
@@ -143,6 +144,7 @@ export const AppRouter = () => {
             <Route path={ROUTES.CONTENIDO_WEB} element={<GestionContenidoWebPage />} />
             <Route path={ROUTES.ALMACEN_CONFIGURACION} element={<ConfiguracionAlmacenPage />} />
             <Route path={ROUTES.EMPLEADOS_ALMACEN} element={<EmpleadosAlmacenPage />} />
+            <Route path={ROUTES.BASE_DATOS} element={<BaseDatosPage />} />
           </Route>
 
           <Route path="/" element={<Navigate to={ROUTES.LOGIN} replace />} />
