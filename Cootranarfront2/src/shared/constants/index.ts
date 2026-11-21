@@ -1,5 +1,6 @@
 export const ROUTES = {
   LOGIN: '/login',
+  NUEVA_PASSWORD: '/nueva-password',
   DASHBOARD: '/dashboard',
   TAQUILLA: '/taquilla',
   TIQUETES: '/tiquetes',

@@ -42,7 +42,10 @@ let isRedirecting = false;
 httpClient.interceptors.request.use((config) => {
   const token = localStorage.getItem('authToken');
   const url = config.url || '';
-  const isLoginUrl = url.includes('/auth/login') || url.includes('/login');
+  // Endpoints públicos: no llevan sesión (una sesión vencida no debe sacar al usuario
+  // de la recuperación de contraseña).
+  const isLoginUrl = url.includes('/auth/login') || url.includes('/login')
+    || url.includes('/auth/olvide-password') || url.includes('/auth/restablecer-password');
 
   if (token && !isLoginUrl) {
     if (isTokenExpired(token)) {

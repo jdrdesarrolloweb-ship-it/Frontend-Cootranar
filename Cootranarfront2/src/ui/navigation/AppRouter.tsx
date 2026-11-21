@@ -63,6 +63,8 @@ export const AppRouter = () => {
       <ErrorBoundary>
         <Routes>
           <Route path={ROUTES.LOGIN} element={<LoginPage />} />
+          {/* Enlace del correo de recuperación de contraseña */}
+          <Route path={ROUTES.NUEVA_PASSWORD} element={<LoginPage modo="restablecer" />} />
           
           {/* Ruta universal de Perfil para cualquier usuario autenticado */}
           <Route element={<PrivateRoute allowedRoles={['ADMINISTRADOR', 'TAQUILLERO', 'EMPLEADO_ENCOMIENDAS', 'ALMACENISTA', 'CONTADOR', 'OPERADOR']} />}>

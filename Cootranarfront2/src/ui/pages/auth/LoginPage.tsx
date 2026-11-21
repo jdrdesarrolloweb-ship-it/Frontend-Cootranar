@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import { httpClient } from '../../../infrastructure/api/httpClient';
 import { ROUTES } from '../../../shared/constants';
 import { isTokenExpired } from '../../../shared/utils/authUtils';
 import { Layout } from '../../components/layout/Layout';
@@ -265,14 +266,30 @@ function ArrowBackIcon() {
 /* ─────────────────────────────────────────────
    Main component
 ───────────────────────────────────────────── */
-export const LoginPage = () => {
+type VistaLogin = 'login' | 'olvido' | 'enviado' | 'restablecer' | 'restablecido';
+
+/**
+ * Pantalla de acceso del sistema interno.
+ * - modo 'login' (/login): iniciar sesión y "¿Olvidaste tu contraseña?".
+ * - modo 'restablecer' (/nueva-password?token=...): crear la nueva contraseña desde el
+ *   enlace enviado al correo.
+ */
+export const LoginPage = ({ modo = 'login' }: { modo?: 'login' | 'restablecer' }) => {
   const [email, setEmail]           = useState('');
   const [password, setPassword]     = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError]           = useState('');
   const [loading, setLoading]       = useState(false);
   const [shakeKey, setShakeKey]     = useState(0); // re-triggers shake animation
-  const [showForm, setShowForm]     = useState(false); // controls form visibility on mobile
+  const [showForm, setShowForm]     = useState(modo === 'restablecer'); // controls form visibility on mobile
+
+  // Recuperación de contraseña
+  const [vista, setVista]           = useState<VistaLogin>(modo === 'restablecer' ? 'restablecer' : 'login');
+  const [enviando, setEnviando]     = useState(false);
+  const [nuevaPassword, setNuevaPassword] = useState('');
+  const [confirmarPassword, setConfirmarPassword] = useState('');
+  const [searchParams] = useSearchParams();
+  const tokenRecuperacion = searchParams.get('token') ?? '';
 
   const errorRef = useRef<HTMLDivElement>(null);
   const { isAuthenticated, user, token, login } = useAuth();
@@ -280,6 +297,7 @@ export const LoginPage = () => {
 
   /* Redirigir de inmediato si ya está autenticado y el token sigue vigente */
   useEffect(() => {
+    if (modo === 'restablecer') return; // el enlace del correo siempre muestra el formulario
     if (isAuthenticated && user && token && !isTokenExpired(token)) {
       const targetRoute =
         user.nombrerol === 'TAQUILLERO'
@@ -293,7 +311,7 @@ export const LoginPage = () => {
           : ROUTES.DASHBOARD;
       navigate(targetRoute, { replace: true });
     }
-  }, [isAuthenticated, user, token, navigate]);
+  }, [isAuthenticated, user, token, navigate, modo]);
 
   /* Inject keyframes once */
   useEffect(() => {
@@ -361,6 +379,63 @@ export const LoginPage = () => {
       setError(msg);
       setLoading(false);
     }
+  };
+
+  /* ── Recuperación: pedir enlace al correo ── */
+  const handleOlvido = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setError('');
+    if (!email || !email.includes('@')) {
+      setError('Por favor ingresa un correo válido');
+      return;
+    }
+    setEnviando(true);
+    try {
+      await httpClient.post('/auth/olvide-password', { correo: email.trim(), origen: 'interno' });
+      setVista('enviado');
+    } catch (err: any) {
+      setError(err?.response?.data?.message || 'No se pudo enviar el correo. Intenta de nuevo.');
+    } finally {
+      setEnviando(false);
+    }
+  };
+
+  /* ── Recuperación: crear la nueva contraseña (mismas reglas que la web de clientes) ── */
+  const reqLongitud = nuevaPassword.length >= 6 && nuevaPassword.length <= 12;
+  const reqNumero = /\d/.test(nuevaPassword);
+  const reqMayuscula = /[A-Z]/.test(nuevaPassword);
+  const reqCoinciden = nuevaPassword.length > 0 && nuevaPassword === confirmarPassword;
+  const nuevaValida = reqLongitud && reqNumero && reqMayuscula && reqCoinciden;
+
+  const handleRestablecer = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setError('');
+    if (!tokenRecuperacion) {
+      setError('El enlace no es válido. Solicita uno nuevo.');
+      return;
+    }
+    if (!nuevaValida) {
+      setError('La contraseña no cumple los requisitos.');
+      return;
+    }
+    setEnviando(true);
+    try {
+      await httpClient.post('/auth/restablecer-password', { token: tokenRecuperacion, password: nuevaPassword });
+      setVista('restablecido');
+    } catch (err: any) {
+      setError(err?.response?.data?.message || 'No se pudo restablecer la contraseña. Solicita un nuevo enlace.');
+    } finally {
+      setEnviando(false);
+    }
+  };
+
+  const irALogin = () => {
+    setError('');
+    setPassword('');
+    setNuevaPassword('');
+    setConfirmarPassword('');
+    setVista('login');
+    if (modo === 'restablecer') navigate(ROUTES.LOGIN, { replace: true });
   };
 
   /* ── Si está iniciando sesión, mostrar de inmediato el Dashboard con Skeleton animado ── */
@@ -864,8 +939,20 @@ export const LoginPage = () => {
           <div style={S.card} className="cootranar-card">
 
             {/* Header */}
-            <h2 style={S.cardTitle}>Bienvenido de nuevo</h2>
-            <p style={S.cardSub}>Ingresa tus credenciales para acceder a tu cuenta</p>
+            <h2 style={S.cardTitle}>
+              {vista === 'login' && 'Bienvenido de nuevo'}
+              {vista === 'olvido' && '¿Olvidaste tu contraseña?'}
+              {vista === 'enviado' && 'Revisa tu correo'}
+              {vista === 'restablecer' && 'Crea tu nueva contraseña'}
+              {vista === 'restablecido' && 'Contraseña actualizada'}
+            </h2>
+            <p style={S.cardSub}>
+              {vista === 'login' && 'Ingresa tus credenciales para acceder a tu cuenta'}
+              {vista === 'olvido' && 'Ingresa tu correo y te enviaremos un enlace para restablecerla'}
+              {vista === 'enviado' && 'Si el correo está registrado, recibirás las instrucciones para restablecer tu contraseña.'}
+              {vista === 'restablecer' && 'Elige una contraseña segura para tu cuenta'}
+              {vista === 'restablecido' && 'Ya puedes iniciar sesión con tu nueva contraseña.'}
+            </p>
 
             {/* Error message */}
             {error && (
@@ -880,6 +967,7 @@ export const LoginPage = () => {
             )}
 
             {/* Form */}
+            {vista === 'login' && (
             <form onSubmit={handleSubmit} noValidate>
 
               {/* Email */}
@@ -904,7 +992,13 @@ export const LoginPage = () => {
               <div style={S.fieldWrap}>
                 <div style={S.fieldHeader}>
                   <label style={S.label} htmlFor="password">Contraseña</label>
-                  <a style={S.forgotLink} href="#">¿Olvidaste tu contraseña?</a>
+                  <a
+                    style={S.forgotLink}
+                    href="#"
+                    onClick={(e) => { e.preventDefault(); setError(''); setVista('olvido'); }}
+                  >
+                    ¿Olvidaste tu contraseña?
+                  </a>
                 </div>
                 <div style={S.inputWrap}>
                   <input
@@ -963,6 +1057,122 @@ export const LoginPage = () => {
                 )}
               </button>
             </form>
+            )}
+
+            {/* Recuperar: pedir enlace */}
+            {vista === 'olvido' && (
+              <form onSubmit={handleOlvido} noValidate>
+                <div style={S.fieldWrap}>
+                  <label style={S.label} htmlFor="email-recuperar">Correo Electrónico</label>
+                  <div style={{ ...S.inputWrap, marginTop: '.45rem' }}>
+                    <input
+                      style={S.input}
+                      id="email-recuperar"
+                      type="email"
+                      placeholder="ejemplo@correo.com"
+                      autoComplete="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      onFocus={onInputFocus}
+                      onBlur={onInputBlur}
+                      autoFocus
+                    />
+                  </div>
+                </div>
+                <button type="submit" disabled={enviando} style={{ ...S.btnSubmit, ...(enviando ? S.btnDisabled : {}) }}>
+                  {enviando ? (<><span style={S.spinner} />Enviando...</>) : 'Enviar enlace'}
+                </button>
+                <p style={{ textAlign: 'center', marginTop: '1rem' }}>
+                  <a style={S.forgotLink} href="#" onClick={(e) => { e.preventDefault(); irALogin(); }}>Volver a iniciar sesión</a>
+                </p>
+              </form>
+            )}
+
+            {/* Recuperar: correo enviado */}
+            {vista === 'enviado' && (
+              <div>
+                <p style={{ ...S.cardSub, marginTop: 0 }}>
+                  Si no lo ves en tu bandeja principal, búscalo en spam. El enlace vence en 24 horas.
+                </p>
+                <button type="button" onClick={irALogin} style={S.btnSubmit}>Volver a iniciar sesión</button>
+              </div>
+            )}
+
+            {/* Restablecer: nueva contraseña */}
+            {vista === 'restablecer' && (
+              <form onSubmit={handleRestablecer} noValidate>
+                {!tokenRecuperacion && (
+                  <div style={S.errorBox}><ErrorIcon />El enlace no es válido. Solicita uno nuevo desde "¿Olvidaste tu contraseña?".</div>
+                )}
+                <div style={S.fieldWrap}>
+                  <label style={S.label} htmlFor="nueva-password">Nueva contraseña</label>
+                  <div style={{ ...S.inputWrap, marginTop: '.45rem' }}>
+                    <input
+                      style={S.input}
+                      id="nueva-password"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="••••••••"
+                      autoComplete="new-password"
+                      value={nuevaPassword}
+                      onChange={(e) => setNuevaPassword(e.target.value)}
+                      onFocus={onInputFocus}
+                      onBlur={onInputBlur}
+                    />
+                    <button
+                      type="button"
+                      style={S.eyeBtn}
+                      onClick={() => setShowPassword((v) => !v)}
+                      aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                    >
+                      {showPassword ? <EyeOffIcon /> : <EyeOpenIcon />}
+                    </button>
+                  </div>
+                </div>
+                <div style={S.fieldWrap}>
+                  <label style={S.label} htmlFor="confirmar-password">Confirmar contraseña</label>
+                  <div style={{ ...S.inputWrap, marginTop: '.45rem' }}>
+                    <input
+                      style={S.input}
+                      id="confirmar-password"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="••••••••"
+                      autoComplete="new-password"
+                      value={confirmarPassword}
+                      onChange={(e) => setConfirmarPassword(e.target.value)}
+                      onFocus={onInputFocus}
+                      onBlur={onInputBlur}
+                    />
+                  </div>
+                </div>
+                <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 1.1rem', fontSize: '.8rem', display: 'grid', gap: '.3rem' }}>
+                  {[
+                    [reqLongitud, 'Entre 6 y 12 caracteres'],
+                    [reqNumero, 'Al menos un número'],
+                    [reqMayuscula, 'Al menos una mayúscula'],
+                    [reqCoinciden, 'Las contraseñas coinciden'],
+                  ].map(([cumple, texto]) => (
+                    <li key={String(texto)} style={{ color: cumple ? '#16a34a' : '#9ca3af', fontWeight: 600 }}>
+                      {cumple ? '✓' : '○'} {texto}
+                    </li>
+                  ))}
+                </ul>
+                <button
+                  type="submit"
+                  disabled={enviando || !nuevaValida || !tokenRecuperacion}
+                  style={{ ...S.btnSubmit, ...(enviando || !nuevaValida || !tokenRecuperacion ? S.btnDisabled : {}) }}
+                >
+                  {enviando ? (<><span style={S.spinner} />Guardando...</>) : 'Guardar nueva contraseña'}
+                </button>
+                <p style={{ textAlign: 'center', marginTop: '1rem' }}>
+                  <a style={S.forgotLink} href="#" onClick={(e) => { e.preventDefault(); irALogin(); }}>Volver a iniciar sesión</a>
+                </p>
+              </form>
+            )}
+
+            {/* Restablecer: listo */}
+            {vista === 'restablecido' && (
+              <button type="button" onClick={irALogin} style={S.btnSubmit}>Iniciar sesión</button>
+            )}
 
             {/* Divider */}
             <div style={S.divider}>
