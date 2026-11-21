@@ -3,55 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { ROUTES } from '../../../shared/constants';
 import { useSidebar } from '../../context/SidebarContext';
 import { useAuth } from '../../hooks/useAuth';
-
-interface NotificacionItem {
-  id: string;
-  titulo: string;
-  descripcion: string;
-  tiempo: string;
-  icono: string;
-  color: string;
-  leido: boolean;
-}
-
-const NOTIFICACIONES_INICIALES: NotificacionItem[] = [
-  {
-    id: '1',
-    titulo: 'Nuevo despacho programado',
-    descripcion: 'Pasto → Cali · Móvil 1888 · 14:00',
-    tiempo: 'Hace 10 min',
-    icono: 'departure_board',
-    color: '#3b82f6',
-    leido: false,
-  },
-  {
-    id: '2',
-    titulo: 'Tiquete emitido en taquilla',
-    descripcion: 'Asiento 14 · Pasajero Juan Pérez',
-    tiempo: 'Hace 25 min',
-    icono: 'confirmation_number',
-    color: '#10b981',
-    leido: false,
-  },
-  {
-    id: '3',
-    titulo: 'Guía de encomienda entregada',
-    descripcion: 'Guía #00284 entregada en Agencia Ipiales',
-    tiempo: 'Hace 1 hora',
-    icono: 'inventory_2',
-    color: '#8b5cf6',
-    leido: true,
-  },
-  {
-    id: '4',
-    titulo: 'Alerta técnica de vehículo',
-    descripcion: 'Bus ABC-467: Revisión de SOAT en 5 días',
-    tiempo: 'Hace 2 horas',
-    icono: 'warning',
-    color: '#f59e0b',
-    leido: true,
-  },
-];
+import { useNotifications, tiempoRelativo } from '../../hooks/useNotifications';
 
 const getPageHeaderInfo = (pathname: string) => {
   if (pathname.startsWith('/rutas/') && pathname.includes('/tarifas-masivas')) {
@@ -450,7 +402,8 @@ export const Header = () => {
   const { theme, isMobile, toggleMobile } = useSidebar();
   const isDark = theme === 'dark';
 
-  const [notificaciones, setNotificaciones] = useState<NotificacionItem[]>(NOTIFICACIONES_INICIALES);
+  // Notificaciones reales en tiempo real (antes era una lista fija de ejemplo)
+  const { notificaciones, noLeidasCount, estado: estadoNotificaciones, marcarLeida, marcarTodasLeidas } = useNotifications();
   const [menuNotificacionesAbierto, setMenuNotificacionesAbierto] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
 
@@ -509,7 +462,7 @@ export const Header = () => {
     }
   };
 
-  const noLeidas = notificaciones.filter((n) => !n.leido).length;
+  const noLeidas = noLeidasCount;
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -526,13 +479,16 @@ export const Header = () => {
   }, [menuNotificacionesAbierto]);
 
   const handleMarcarTodoLeido = () => {
-    setNotificaciones((prev) => prev.map((n) => ({ ...n, leido: true })));
+    marcarTodasLeidas();
   };
 
-  const handleToggleLeido = (id: string) => {
-    setNotificaciones((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, leido: !n.leido } : n))
-    );
+  /** Abrir una notificación: se marca leída y se navega al módulo correspondiente */
+  const handleAbrirNotificacion = (id: string, ruta?: string | null) => {
+    marcarLeida(id);
+    if (ruta) {
+      setMenuNotificacionesAbierto(false);
+      navigate(ruta);
+    }
   };
 
   return (
@@ -760,6 +716,13 @@ export const Header = () => {
                     <span style={{ fontSize: '14px', fontWeight: 800, color: isDark ? '#ffffff' : '#0f172a' }}>
                       Notificaciones
                     </span>
+                    <span
+                      title={estadoNotificaciones === 'conectado' ? 'En vivo' : estadoNotificaciones === 'conectando' ? 'Conectando...' : 'Sin conexión en tiempo real (reintentando)'}
+                      style={{
+                        width: '8px', height: '8px', borderRadius: '50%',
+                        backgroundColor: estadoNotificaciones === 'conectado' ? '#22c55e' : estadoNotificaciones === 'conectando' ? '#f59e0b' : '#94a3b8',
+                      }}
+                    />
                     {noLeidas > 0 && (
                       <span
                         style={{
@@ -825,7 +788,7 @@ export const Header = () => {
                     notificaciones.map((item) => (
                       <div
                         key={item.id}
-                        onClick={() => handleToggleLeido(item.id)}
+                        onClick={() => handleAbrirNotificacion(item.id, item.ruta)}
                         style={{
                           padding: '12px 16px',
                           display: 'flex',
@@ -895,7 +858,10 @@ export const Header = () => {
                               fontWeight: 500,
                             }}
                           >
-                            {item.tiempo}
+                            {tiempoRelativo(item.fecha)}
+                            {item.prioridad === 'ALTA' && (
+                              <span style={{ marginLeft: '6px', color: '#dc2626', fontWeight: 800 }}>· Urgente</span>
+                            )}
                           </span>
                         </div>
 

@@ -1,204 +1,168 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from './useAuth';
-import { httpClient } from '../../infrastructure/api/httpClient';
+import { httpClient, API_BASE_URL } from '../../infrastructure/api/httpClient';
 
 export interface NotificacionItem {
   id: string;
+  modulo: string;
+  tipo: string;
   titulo: string;
   descripcion: string;
-  tiempo: string;
   icono: string;
   color: string;
+  prioridad: 'BAJA' | 'NORMAL' | 'ALTA';
+  ruta?: string | null;
+  fecha: string;
   leido: boolean;
-  ruta?: string;
 }
 
+export type EstadoConexion = 'conectando' | 'conectado' | 'desconectado';
+
 /**
- * Calcula la URL del WebSocket nativo dinámicamente según el entorno
+ * URL del WebSocket a partir de la misma API que usa el panel:
+ * http://localhost:3000/api → ws://localhost:3000/ws ; https://x/api → wss://x/ws ; /api → wss://<host>/ws
  */
 const getWsUrl = (): string => {
-  if (import.meta.env.VITE_WS_URL) {
-    return import.meta.env.VITE_WS_URL;
-  }
-
-  const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:';
-  const wsProtocol = isHttps ? 'wss:' : 'ws:';
-  
-  if (import.meta.env.VITE_API_URL) {
-    const cleanHost = String(import.meta.env.VITE_API_URL)
-      .replace(/^https?:\/\//, '')
-      .replace(/\/api\/?$/, '');
-    return `${wsProtocol}//${cleanHost}/ws`;
-  }
-
-  const host = typeof window !== 'undefined' && window.location.hostname ? window.location.hostname : 'localhost';
-  return `${wsProtocol}//${host}:3000/ws`;
+  if (import.meta.env.VITE_WS_URL) return import.meta.env.VITE_WS_URL;
+  const base = API_BASE_URL.startsWith('http')
+    ? API_BASE_URL
+    : `${window.location.protocol}//${window.location.host}${API_BASE_URL}`;
+  return base.replace(/^http/, 'ws').replace(/\/api\/?$/, '') + '/ws';
 };
 
+/** "Hace 5 min", "Hace 2 horas", "Hace 3 días" */
+export const tiempoRelativo = (fecha: string): string => {
+  const min = Math.floor((Date.now() - new Date(fecha).getTime()) / 60000);
+  if (!Number.isFinite(min) || min < 1) return 'Justo ahora';
+  if (min < 60) return `Hace ${min} min`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return `Hace ${h} ${h === 1 ? 'hora' : 'horas'}`;
+  const d = Math.floor(h / 24);
+  return `Hace ${d} ${d === 1 ? 'día' : 'días'}`;
+};
+
+/**
+ * Notificaciones del sistema interno en tiempo real (WebSocket nativo contra ms-notificaciones).
+ * Carga el historial por REST, recibe las nuevas por WebSocket y se reconecta solo.
+ */
 export const useNotifications = () => {
   const { user, token } = useAuth();
   const [notificaciones, setNotificaciones] = useState<NotificacionItem[]>([]);
-  const [cargando, setCargando] = useState<boolean>(true);
+  const [noLeidasServidor, setNoLeidasServidor] = useState(0);
+  const [cargando, setCargando] = useState(true);
+  const [estado, setEstado] = useState<EstadoConexion>('desconectado');
   const wsRef = useRef<WebSocket | null>(null);
+  const [, setTick] = useState(0);
 
-  // 1. Cargar notificaciones iniciales desde el backend vía REST
-  const cargarNotificaciones = useCallback(async () => {
+  const cargar = useCallback(async () => {
     try {
       setCargando(true);
-      const rolActual = user?.rolActivo || user?.nombrerol;
-      const res = await httpClient.get('/notificaciones', {
-        params: {
-          rol: rolActual,
-          idusuario: user?.idusuario
-        }
-      });
+      const res = await httpClient.get('/notificaciones', { params: { limite: 50 } });
       if (res.data?.success && Array.isArray(res.data.data)) {
         setNotificaciones(res.data.data);
+        setNoLeidasServidor(Number(res.data.noLeidas) || 0);
       }
     } catch (err) {
-      console.warn('[useNotifications] No se pudieron cargar notificaciones iniciales:', err);
+      console.warn('[useNotifications] No se pudieron cargar las notificaciones:', err);
     } finally {
       setCargando(false);
     }
-  }, [user]);
+  }, []);
 
-  // 2. Conectar al WebSocket NATIVO (RFC 6455 del Navegador)
   useEffect(() => {
-    if (!user) return;
+    const authToken = token || localStorage.getItem('authToken');
+    if (!user || !authToken) return;
 
-    cargarNotificaciones();
+    cargar();
+    let cerrado = false;
+    let reintento: ReturnType<typeof setTimeout>;
+    let ping: ReturnType<typeof setInterval>;
+    let espera = 2000;
 
-    let unmounted = false;
-    let reconnectTimeout: ReturnType<typeof setTimeout>;
-    let pingInterval: ReturnType<typeof setInterval>;
+    const conectar = () => {
+      if (cerrado) return;
+      setEstado('conectando');
+      const ws = new WebSocket(`${getWsUrl()}?token=${encodeURIComponent(authToken)}`);
+      wsRef.current = ws;
 
-    const connectWebSocket = () => {
-      if (unmounted) return;
+      ws.onopen = () => {
+        setEstado('conectado');
+        espera = 2000;
+        ping = setInterval(() => ws.readyState === WebSocket.OPEN && ws.send(JSON.stringify({ type: 'ping' })), 25000);
+        // Al reconectar se recarga para no perder lo que llegó mientras no había conexión
+        cargar();
+      };
 
-      const authToken = token || localStorage.getItem('authToken') || '';
-      const baseUrl = getWsUrl();
-      const params = new URLSearchParams();
-
-      const rolActual = user.rolActivo || user.nombrerol;
-      if (authToken) params.set('token', authToken);
-      if (rolActual) params.set('rol', rolActual);
-      if (user.idusuario) params.set('idusuario', String(user.idusuario));
-
-      const fullWsUrl = `${baseUrl}?${params.toString()}`;
-
-      try {
-        console.log('⚡ [useNotifications] Conectando a WebSocket NATIVO:', baseUrl);
-        const ws = new WebSocket(fullWsUrl);
-        wsRef.current = ws;
-
-        ws.onopen = () => {
-          console.log('🔔 [useNotifications] WebSocket NATIVO conectado exitosamente');
-
-          // Keep-alive ping periódico cada 25 segundos
-          pingInterval = setInterval(() => {
-            if (ws.readyState === WebSocket.OPEN) {
-              ws.send(JSON.stringify({ type: 'ping' }));
-            }
-          }, 25000);
-        };
-
-        ws.onmessage = (event: MessageEvent) => {
-          try {
-            const mensaje = JSON.parse(event.data);
-
-            if (mensaje.type === 'nueva_notificacion' && mensaje.data) {
-              const nueva: NotificacionItem = mensaje.data;
-              console.log('⚡ [useNotifications] Nueva notificación en tiempo real recibida:', nueva.titulo);
-
-              setNotificaciones((prev) => {
-                if (prev.some((n) => n.id === nueva.id)) return prev;
-                return [nueva, ...prev];
-              });
-
-              // Sonido sutil de alerta
-              try {
-                const audio = new Audio('/notification.mp3');
-                audio.volume = 0.4;
-                audio.play().catch(() => {});
-              } catch {
-                // Audio autoplay restringido por browser
-              }
-            }
-          } catch (err) {
-            console.warn('[useNotifications] Error parseando mensaje WebSocket:', err);
+      ws.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+          if (msg.type === 'nueva_notificacion' && msg.data) {
+            const nueva: NotificacionItem = msg.data;
+            setNotificaciones((prev) => (prev.some((n) => n.id === nueva.id) ? prev : [nueva, ...prev].slice(0, 100)));
+            setNoLeidasServidor((n) => n + 1);
           }
-        };
-
-        ws.onerror = (err) => {
-          console.warn('⚠️ [useNotifications] Error en WebSocket nativo:', err);
-        };
-
-        ws.onclose = (event) => {
-          clearInterval(pingInterval);
-          if (!unmounted) {
-            console.log(`⚠️ [useNotifications] WebSocket cerrado (${event.code}). Reconectando en 3s...`);
-            reconnectTimeout = setTimeout(connectWebSocket, 3000);
-          }
-        };
-      } catch (err) {
-        console.error('❌ [useNotifications] Error iniciando WebSocket nativo:', err);
-        if (!unmounted) {
-          reconnectTimeout = setTimeout(connectWebSocket, 4000);
+        } catch {
+          // mensaje no JSON: se ignora
         }
-      }
+      };
+
+      ws.onclose = () => {
+        clearInterval(ping);
+        setEstado('desconectado');
+        if (!cerrado) {
+          reintento = setTimeout(conectar, espera);
+          espera = Math.min(espera * 2, 30000); // reintentos progresivos hasta 30 s
+        }
+      };
+      ws.onerror = () => ws.close();
     };
 
-    connectWebSocket();
+    conectar();
+    // Refrescar los "Hace X min" cada minuto
+    const reloj = setInterval(() => setTick((t) => t + 1), 60000);
 
     return () => {
-      unmounted = true;
-      clearTimeout(reconnectTimeout);
-      clearInterval(pingInterval);
-      if (wsRef.current) {
-        wsRef.current.close();
-        wsRef.current = null;
-      }
+      cerrado = true;
+      clearTimeout(reintento);
+      clearInterval(ping);
+      clearInterval(reloj);
+      wsRef.current?.close();
+      wsRef.current = null;
     };
-  }, [user, token, cargarNotificaciones]);
+  }, [user, token, cargar]);
 
-  // 3. Marcar notificación como leída
   const marcarLeida = useCallback(async (id: string) => {
-    setNotificaciones((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, leido: true } : n))
-    );
-
+    let eraNoLeida = false;
+    setNotificaciones((prev) => prev.map((n) => {
+      if (n.id === id && !n.leido) eraNoLeida = true;
+      return n.id === id ? { ...n, leido: true } : n;
+    }));
+    if (eraNoLeida) setNoLeidasServidor((n) => Math.max(n - 1, 0));
     try {
       await httpClient.patch(`/notificaciones/${id}/leido`);
     } catch {
-      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-        wsRef.current.send(JSON.stringify({ type: 'marcar_leida', id }));
-      }
+      wsRef.current?.readyState === WebSocket.OPEN && wsRef.current.send(JSON.stringify({ type: 'marcar_leida', id }));
     }
   }, []);
 
-  // 4. Marcar todas como leídas
   const marcarTodasLeidas = useCallback(async () => {
-    setNotificaciones((prev) =>
-      prev.map((n) => ({ ...n, leido: true }))
-    );
-
+    setNotificaciones((prev) => prev.map((n) => ({ ...n, leido: true })));
+    setNoLeidasServidor(0);
     try {
       await httpClient.patch('/notificaciones/marcar-todas-leidas');
     } catch {
-      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-        wsRef.current.send(JSON.stringify({ type: 'marcar_todas_leidas' }));
-      }
+      wsRef.current?.readyState === WebSocket.OPEN && wsRef.current.send(JSON.stringify({ type: 'marcar_todas_leidas' }));
     }
   }, []);
 
-  const noLeidasCount = notificaciones.filter((n) => !n.leido).length;
-
   return {
     notificaciones,
-    noLeidasCount,
+    // El servidor cuenta también las no leídas que no alcanzan a estar en la lista cargada
+    noLeidasCount: Math.max(noLeidasServidor, notificaciones.filter((n) => !n.leido).length),
     cargando,
+    estado,
     marcarLeida,
     marcarTodasLeidas,
-    recargar: cargarNotificaciones
+    recargar: cargar,
   };
 };
