@@ -18,15 +18,19 @@ export interface NotificacionItem {
 
 export type EstadoConexion = 'conectando' | 'conectado' | 'desconectado';
 
+const GATEWAY_PRODUCCION = 'https://cootranar-api-ecosystem.onrender.com/api';
+
 /**
- * URL del WebSocket a partir de la misma API que usa el panel:
- * http://localhost:3000/api → ws://localhost:3000/ws ; https://x/api → wss://x/ws ; /api → wss://<host>/ws
+ * URL del WebSocket:
+ * - VITE_WS_URL si está definida (p. ej. wss://cootranar-api-ecosystem.onrender.com/ws).
+ * - Si el panel habla con una API absoluta (localhost:3000 o Render): misma máquina, ruta /ws.
+ * - Si usa una API relativa (/api, p. ej. en Vercel): Vercel no reenvía WebSockets, así que
+ *   se conecta directo al gateway (VITE_API_URL o el de producción en Render).
  */
 const getWsUrl = (): string => {
   if (import.meta.env.VITE_WS_URL) return import.meta.env.VITE_WS_URL;
-  const base = API_BASE_URL.startsWith('http')
-    ? API_BASE_URL
-    : `${window.location.protocol}//${window.location.host}${API_BASE_URL}`;
+  const absoluta = (url?: string) => (url && /^https?:\/\//.test(url) ? url : null);
+  const base = absoluta(API_BASE_URL) || absoluta(import.meta.env.VITE_API_URL) || GATEWAY_PRODUCCION;
   return base.replace(/^http/, 'ws').replace(/\/api\/?$/, '') + '/ws';
 };
 
