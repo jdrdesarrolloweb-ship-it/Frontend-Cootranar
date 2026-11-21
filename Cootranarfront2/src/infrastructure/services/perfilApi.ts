@@ -41,4 +41,12 @@ export const perfilApi = {
     const res = await httpClient.put('/usuarios/foto-perfil', { fotoperfil, eliminar: fotoperfil === null });
     return res.data?.data || res.data;
   },
+
+  cambiarPassword: async (currentPassword: string, newPassword: string) => {
+    const res = await httpClient.post('/auth/cambiar-password', {
+      currentPassword,
+      newPassword,
+    });
+    return res.data;
+  },
 };

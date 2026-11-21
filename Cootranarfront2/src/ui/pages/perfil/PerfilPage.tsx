@@ -183,13 +183,14 @@ export const PerfilPage: React.FC = () => {
 
     setSavingPassword(true);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 800));
+      await perfilApi.cambiarPassword(currentPassword, newPassword);
       setMensajeExito('Contraseña actualizada correctamente.');
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
-    } catch (err) {
-      setMensajeError('Error al actualizar la contraseña. Inténtalo de nuevo.');
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || 'Error al actualizar la contraseña. Verifica tu contraseña actual.';
+      setMensajeError(msg);
     } finally {
       setSavingPassword(false);
     }
