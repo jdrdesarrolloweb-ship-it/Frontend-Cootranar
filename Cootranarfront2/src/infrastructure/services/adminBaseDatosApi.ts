@@ -70,7 +70,59 @@ export interface RegistroAuditoriaBD {
 /** Identificador de una fila: valores de la llave primaria, o __ctid si la tabla no tiene. */
 export type ClaveFila = Record<string, unknown>;
 
+export interface BackupBD {
+  idbackup: number;
+  tipo: 'MANUAL' | 'PRE_OPERACION';
+  motivo: string | null;
+  archivo: string | null;
+  tamano: number | null;
+  estado: 'EN_PROCESO' | 'COMPLETADO' | 'FALLIDO' | 'EXPIRADO';
+  error: string | null;
+  duracionms: number | null;
+  fecha: string;
+  usuario: string | null;
+}
+
+export interface RespaldoBD {
+  idrespaldo: number;
+  idauditoria: number | null;
+  accion: string;
+  descripcion: string | null;
+  totalfilas: number;
+  idbackup: number | null;
+  estado: 'DISPONIBLE' | 'RESTAURADO';
+  fecha: string;
+  fecharestauracion: string | null;
+  usuario: string | null;
+  usuariorestaura: string | null;
+  tablas: Array<{ tabla: string; tipo: 'FILAS' | 'REFERENCIAS'; filas: number }>;
+}
+
+export interface ResultadoEliminar {
+  cascada: boolean;
+  eliminadas: Record<string, number>;
+  idrespaldo: number | null;
+  idbackup: number | null;
+}
+
+export interface ResultadoVaciar {
+  tablasVaciadas: number;
+  filasEliminadas: number;
+  idrespaldo: number | null;
+  idbackup: number | null;
+  aviso: string | null;
+}
+
+export interface ResultadoDeshacer {
+  idrespaldo: number;
+  restauradas: Record<string, number>;
+  totalFilas: number;
+  avisos: string[];
+}
+
 const BASE = '/admin-bd';
+// Las operaciones que crean un backup completo pueden tardar más de un minuto
+const LARGO = { timeout: 11 * 60 * 1000 };
 const ruta = (schema: string, tabla: string) => `${BASE}/tablas/${encodeURIComponent(schema)}/${encodeURIComponent(tabla)}`;
 
 export const adminBaseDatosApi = {
@@ -89,8 +141,8 @@ export const adminBaseDatosApi = {
     return r.data.data;
   },
 
-  async eliminarFilas(schema: string, tabla: string, claves: ClaveFila[], cascada: boolean): Promise<{ cascada: boolean; eliminadas: Record<string, number> }> {
-    const r = await httpClient.post<{ data: { cascada: boolean; eliminadas: Record<string, number> } }>(`${ruta(schema, tabla)}/eliminar`, { claves, cascada });
+  async eliminarFilas(schema: string, tabla: string, claves: ClaveFila[], cascada: boolean): Promise<ResultadoEliminar> {
+    const r = await httpClient.post<{ data: ResultadoEliminar }>(`${ruta(schema, tabla)}/eliminar`, { claves, cascada }, LARGO);
     return r.data.data;
   },
 
@@ -104,13 +156,38 @@ export const adminBaseDatosApi = {
     return r.data.data;
   },
 
-  async vaciar(tablas: string[], confirmacion: string): Promise<{ tablasVaciadas: number; filasEliminadas: number }> {
-    const r = await httpClient.post<{ data: { tablasVaciadas: number; filasEliminadas: number } }>(`${BASE}/vaciar`, { tablas, confirmacion });
+  async vaciar(tablas: string[], confirmacion: string): Promise<ResultadoVaciar> {
+    const r = await httpClient.post<{ data: ResultadoVaciar }>(`${BASE}/vaciar`, { tablas, confirmacion }, LARGO);
     return r.data.data;
   },
 
   async auditoria(limite = 100): Promise<RegistroAuditoriaBD[]> {
     const r = await httpClient.get<{ data: RegistroAuditoriaBD[] }>(`${BASE}/auditoria`, { params: { limite } });
+    return r.data.data;
+  },
+
+  async backups(): Promise<BackupBD[]> {
+    const r = await httpClient.get<{ data: BackupBD[] }>(`${BASE}/backups`);
+    return r.data.data;
+  },
+
+  async crearBackup(motivo?: string): Promise<BackupBD> {
+    const r = await httpClient.post<{ data: BackupBD }>(`${BASE}/backups`, { motivo: motivo || undefined }, LARGO);
+    return r.data.data;
+  },
+
+  async urlDescargaBackup(idbackup: number): Promise<{ url: string; nombre: string; expiraEnSegundos: number }> {
+    const r = await httpClient.get<{ data: { url: string; nombre: string; expiraEnSegundos: number } }>(`${BASE}/backups/${idbackup}/descarga`);
+    return r.data.data;
+  },
+
+  async respaldos(): Promise<RespaldoBD[]> {
+    const r = await httpClient.get<{ data: RespaldoBD[] }>(`${BASE}/respaldos`);
+    return r.data.data;
+  },
+
+  async deshacer(idrespaldo: number): Promise<ResultadoDeshacer> {
+    const r = await httpClient.post<{ data: ResultadoDeshacer }>(`${BASE}/respaldos/${idrespaldo}/deshacer`, {}, LARGO);
     return r.data.data;
   },
 };

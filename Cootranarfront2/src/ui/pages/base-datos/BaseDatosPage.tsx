@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Layout } from '../../components/layout/Layout';
 import adminBaseDatosApi, {
   type TablaBD, type PaginaFilas, type FilaBD, type ClaveFila,
@@ -8,22 +8,21 @@ import {
   C, FONT, TH, TD, inputStyle, labelStyle,
   botonPrimario, botonSecundario, botonPeligro, botonIcono,
 } from '../../components/millas/estilosMillas';
+import { Aviso, Modal } from './componentesBaseDatos';
+import { mensajeError } from './mensajeError';
+import { BackupsPanel } from './BackupsPanel';
 
-type Pestania = 'tablas' | 'limpiar' | 'auditoria';
+type Pestania = 'tablas' | 'limpiar' | 'backups' | 'auditoria';
 
 const PESTANIAS: Array<{ id: Pestania; label: string; icono: string }> = [
   { id: 'tablas', label: 'Tablas', icono: 'table_view' },
   { id: 'limpiar', label: 'Limpiar base de datos', icono: 'cleaning_services' },
+  { id: 'backups', label: 'Backups y deshacer', icono: 'backup' },
   { id: 'auditoria', label: 'Auditoría', icono: 'history' },
 ];
 
 const LIMITE = 25;
 const nombreCompleto = (t: { schema: string; tabla: string }) => `${t.schema}.${t.tabla}`;
-
-const mensajeError = (err: unknown, porDefecto: string) => {
-  const e = err as { response?: { data?: { message?: string } } };
-  return e?.response?.data?.message || porDefecto;
-};
 
 const mostrarValor = (v: unknown): string => {
   if (v === null || v === undefined) return '';
@@ -35,47 +34,6 @@ const claveDeFila = (fila: FilaBD, pk: string[]): ClaveFila =>
   pk.length ? Object.fromEntries(pk.map(c => [c, fila[c]])) : { __ctid: fila.__ctid };
 
 const idFila = (fila: FilaBD, pk: string[]) => JSON.stringify(claveDeFila(fila, pk));
-
-// ── Componentes base ─────────────────────────────────────────────────────────
-const Modal = ({ titulo, icono, peligro, onCerrar, children, ancho = 640 }: {
-  titulo: string; icono: string; peligro?: boolean; onCerrar: () => void; children: React.ReactNode; ancho?: number;
-}) => (
-  <div role="dialog" aria-modal="true" style={{
-    position: 'fixed', inset: 0, background: 'rgba(11,28,48,0.55)', zIndex: 1000,
-    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px',
-  }}>
-    <div style={{
-      background: '#fff', borderRadius: '14px', width: '100%', maxWidth: ancho, maxHeight: '90vh',
-      overflow: 'auto', padding: '22px', fontFamily: FONT, border: `1px solid ${C.outlineVariant}`,
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-        <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: peligro ? C.error : C.primary, display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span className="material-symbols-outlined">{icono}</span>{titulo}
-        </h2>
-        <button onClick={onCerrar} aria-label="Cerrar" style={{ ...botonIcono, background: 'transparent' }}>
-          <span className="material-symbols-outlined">close</span>
-        </button>
-      </div>
-      {children}
-    </div>
-  </div>
-);
-
-const Aviso = ({ tipo, children }: { tipo: 'error' | 'ok' | 'warning'; children: React.ReactNode }) => {
-  const color = tipo === 'ok' ? C.success : tipo === 'warning' ? C.warning : C.error;
-  const fondo = tipo === 'ok' ? C.successBg : tipo === 'warning' ? C.warningBg : C.errorBg;
-  return (
-    <div style={{
-      padding: '10px 14px', borderRadius: '9px', background: fondo, color, fontSize: '13px',
-      fontWeight: 600, display: 'flex', gap: '8px', alignItems: 'flex-start', marginBottom: '12px',
-    }}>
-      <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
-        {tipo === 'ok' ? 'check_circle' : tipo === 'warning' ? 'warning' : 'error'}
-      </span>
-      <div>{children}</div>
-    </div>
-  );
-};
 
 /** Pide escribir un texto exacto antes de habilitar una acción destructiva. */
 const ConfirmarEscribiendo = ({ texto, valor, onChange }: { texto: string; valor: string; onChange: (v: string) => void }) => (
@@ -107,7 +65,9 @@ const TablaImpactoVaciar = ({ impacto }: { impacto: ImpactoVaciar }) => (
 // ── Página ───────────────────────────────────────────────────────────────────
 export const BaseDatosPage = () => {
   const [pestania, setPestania] = useState<Pestania>('tablas');
-  const [mensaje, setMensaje] = useState<{ tipo: 'ok' | 'error'; texto: string } | null>(null);
+  const [mensaje, setMensaje] = useState<{ tipo: 'ok' | 'error' | 'warning'; texto: string; idrespaldo?: number | null } | null>(null);
+  const [deshaciendo, setDeshaciendo] = useState(false);
+  const [senalBackups, setSenalBackups] = useState(0);
   const [tablas, setTablas] = useState<TablaBD[]>([]);
   const [cargandoTablas, setCargandoTablas] = useState(false);
   const [filtroTablas, setFiltroTablas] = useState('');
@@ -128,9 +88,27 @@ export const BaseDatosPage = () => {
   const [procesando, setProcesando] = useState(false);
   const [errorModal, setErrorModal] = useState<string | null>(null);
 
-  const notificar = (tipo: 'ok' | 'error', texto: string) => {
-    setMensaje({ tipo, texto });
-    window.setTimeout(() => setMensaje(null), 6000);
+  const temporizador = useRef<number | undefined>(undefined);
+  const notificar = (tipo: 'ok' | 'error' | 'warning', texto: string, idrespaldo?: number | null) => {
+    setMensaje({ tipo, texto, idrespaldo });
+    window.clearTimeout(temporizador.current);
+    // Con opción de deshacer el aviso queda más tiempo a la vista
+    temporizador.current = window.setTimeout(() => setMensaje(null), idrespaldo ? 30000 : 6000);
+  };
+
+  const deshacerUltima = async (idrespaldo: number) => {
+    setDeshaciendo(true);
+    try {
+      const r = await adminBaseDatosApi.deshacer(idrespaldo);
+      notificar(r.avisos.length ? 'warning' : 'ok', `Operación deshecha: ${r.totalFilas.toLocaleString('es-CO')} fila(s) restauradas.${r.avisos.length ? ` ${r.avisos.join(' ')}` : ''}`);
+      cargarTablas();
+      cargarFilas();
+      setSenalBackups(n => n + 1);
+    } catch (err) {
+      notificar('error', mensajeError(err, 'No se pudo deshacer la operación.'));
+    } finally {
+      setDeshaciendo(false);
+    }
   };
 
   const cargarTablas = useCallback(async () => {
@@ -205,7 +183,7 @@ export const BaseDatosPage = () => {
       const total = Object.values(r.eliminadas).reduce((a, n) => a + n, 0);
       cerrarModales();
       setMarcadas({});
-      notificar('ok', `Se eliminaron ${total.toLocaleString('es-CO')} filas (${Object.entries(r.eliminadas).map(([t, n]) => `${t}: ${n}`).join(', ')}).`);
+      notificar('ok', `Se eliminaron ${total.toLocaleString('es-CO')} filas (${Object.entries(r.eliminadas).map(([t, n]) => `${t}: ${n}`).join(', ')}).${r.idbackup ? ` Antes se creó el backup completo #${r.idbackup}.` : ''}`, r.idrespaldo);
       cargarFilas();
       cargarTablas();
     } catch (err) {
@@ -236,7 +214,7 @@ export const BaseDatosPage = () => {
       const r = await adminBaseDatosApi.vaciar(modalVaciar.tablas, confirmacion);
       cerrarModales();
       setMarcadosLimpieza({});
-      notificar('ok', `Se vaciaron ${r.tablasVaciadas} tablas (${r.filasEliminadas.toLocaleString('es-CO')} filas).`);
+      notificar(r.aviso ? 'warning' : 'ok', `Se vaciaron ${r.tablasVaciadas} tablas (${r.filasEliminadas.toLocaleString('es-CO')} filas).${r.idbackup ? ` Backup previo: #${r.idbackup}.` : ''}${r.aviso ? ` ${r.aviso}` : ''}`, r.idrespaldo);
       cargarTablas();
       cargarFilas();
     } catch (err) {
@@ -307,11 +285,23 @@ export const BaseDatosPage = () => {
       </div>
 
       <Aviso tipo="warning">
-        Los cambios hechos aquí son definitivos y no pasan por las reglas de negocio de cada módulo.
+        Los cambios hechos aquí no pasan por las reglas de negocio de cada módulo. Cada borrado se puede deshacer durante
+        30 días (pestaña "Backups y deshacer") y antes de vaciar o limpiar se crea un backup completo.
         Las tablas de usuarios y roles están protegidas para que no pierdas el acceso.
       </Aviso>
 
-      {mensaje && <Aviso tipo={mensaje.tipo}>{mensaje.texto}</Aviso>}
+      {mensaje && (
+        <Aviso tipo={mensaje.tipo}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+            <span>{mensaje.texto}</span>
+            {mensaje.idrespaldo && (
+              <button style={botonSecundario} disabled={deshaciendo} onClick={() => deshacerUltima(mensaje.idrespaldo as number)}>
+                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>undo</span>{deshaciendo ? 'Deshaciendo…' : 'Deshacer'}
+              </button>
+            )}
+          </div>
+        </Aviso>
+      )}
 
       <div style={{ display: 'flex', gap: '8px', marginBottom: '18px', flexWrap: 'wrap' }}>
         {PESTANIAS.map(p => {
@@ -498,6 +488,9 @@ export const BaseDatosPage = () => {
         </div>
       )}
 
+      {/* ═══ BACKUPS ═══ */}
+      {pestania === 'backups' && <BackupsPanel recargarSenal={senalBackups} onCambio={() => { cargarTablas(); cargarFilas(); }} />}
+
       {/* ═══ AUDITORÍA ═══ */}
       {pestania === 'auditoria' && (
         <div style={{ background: '#fff', border: `1px solid ${C.outlineVariant}`, borderRadius: 12, overflow: 'auto', fontFamily: FONT }}>
@@ -597,6 +590,10 @@ export const BaseDatosPage = () => {
                 Se vaciarán <strong>{modalVaciar.impacto.tablas.length}</strong> tabla(s) con <strong>{modalVaciar.impacto.totalFilas.toLocaleString('es-CO')}</strong> filas en total.
                 Los contadores de id vuelven a empezar.
               </p>
+              <Aviso tipo="info">
+                Antes de vaciar se crea un backup completo de la base de datos (puede tardar alrededor de un minuto)
+                {modalVaciar.impacto.totalFilas <= 20000 ? ' y la operación se podrá deshacer.' : '. Son demasiadas filas para deshacer desde el panel: solo quedará el backup completo.'}
+              </Aviso>
               <TablaImpactoVaciar impacto={modalVaciar.impacto} />
               {modalVaciar.impacto.bloqueadaPorProtegidas && <div style={{ marginTop: 10 }}><Aviso tipo="error">La operación alcanzaría una tabla protegida y no se puede ejecutar.</Aviso></div>}
               <ConfirmarEscribiendo texto={textoConfirmacionVaciar} valor={confirmacion} onChange={setConfirmacion} />
@@ -606,7 +603,7 @@ export const BaseDatosPage = () => {
                   style={{ ...botonPrimario(procesando || confirmacion !== textoConfirmacionVaciar || modalVaciar.impacto.bloqueadaPorProtegidas), background: C.error }}
                   disabled={procesando || confirmacion !== textoConfirmacionVaciar || modalVaciar.impacto.bloqueadaPorProtegidas}
                   onClick={ejecutarVaciar}>
-                  {procesando ? 'Vaciando...' : 'Vaciar definitivamente'}
+                  {procesando ? 'Creando backup y vaciando…' : 'Vaciar'}
                 </button>
               </div>
             </>
