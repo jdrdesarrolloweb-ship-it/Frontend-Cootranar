@@ -7,6 +7,7 @@ import {
   Alerta, Badge, Btn, Card, CardHeader, CentroSelect, CuentaSelect, Field, Grid, Kpi, MESES, Modal, Tabla, TerceroPicker, Valor,
   exportarExcel, hoyCO, inputStyle, money, pedirMotivo, useMensaje,
 } from './contUi';
+import { NominaElectronicaPanel } from './NominaElectronica';
 
 // ════════════════════════════════════════════════════════════════════════════
 // ACTIVOS FIJOS
@@ -162,9 +163,10 @@ export const NominaPage = () => {
   const guardar = useMutation({
     mutationFn: () => {
       const body = {
-        anio: form.anio, mes: form.mes, descripcion: form.descripcion, empleados: form.empleados.map((e: any) => ({
+        anio: form.anio, mes: form.mes, descripcion: form.descripcion, fechapago: form.fechapago || null, empleados: form.empleados.map((e: any) => ({
           idtercero: e.tercero?.idtercero, documento: e.documento, nombre: e.nombre, idcentro: e.idcentro,
-          salario: Number(e.salario || 0), auxtransporte: Number(e.auxtransporte || 0), otrosdevengos: Number(e.otrosdevengos || 0), otrasdeducciones: Number(e.otrasdeducciones || 0)
+          salario: Number(e.salario || 0), auxtransporte: Number(e.auxtransporte || 0), otrosdevengos: Number(e.otrosdevengos || 0), otrasdeducciones: Number(e.otrasdeducciones || 0),
+          diastrabajados: Number(e.diastrabajados || 30),
         }))
       };
       return form.idnomina ? cont.put(`/nominas/${form.idnomina}`, body) : cont.post('/nominas', body);
@@ -172,8 +174,8 @@ export const NominaPage = () => {
     onSuccess: () => { m.ok('Nómina guardada en borrador'); setForm(null); invalidar(); }, onError: (e) => m.err(e),
   });
   const causar = useMutation({ mutationFn: (id: number) => cont.post(`/nominas/${id}/causar`), onSuccess: (r: any) => { m.ok(`Nómina causada (NO-${r.numero})`); invalidar(); det.refetch(); }, onError: (e) => m.err(e) });
-  const anular = useMutation({ mutationFn: ({ id, motivo }: { id: number; motivo: string }) => cont.patch(`/nominas/${id}/anular`, { motivo }), onSuccess: () => { m.ok('Nómina anulada'); invalidar(); det.refetch(); }, onError: (e) => m.err(e) });
-  const empleadoVacio = () => ({ tercero: null, documento: '', nombre: '', idcentro: null, salario: '', auxtransporte: '', otrosdevengos: '', otrasdeducciones: '' });
+  const anular = useMutation({ mutationFn: ({ id, motivo }: { id: number; motivo: string }) => cont.patch(`/nominas/${id}/anular`, { motivo }), onSuccess: (r: any) => { m.ok(r?.notasAjuste ? `Nómina anulada · ${r.notasAjuste} nota(s) de ajuste enviadas a la DIAN` : 'Nómina anulada'); invalidar(); det.refetch(); }, onError: (e) => m.err(e) });
+  const empleadoVacio = () => ({ tercero: null, documento: '', nombre: '', idcentro: null, salario: '', auxtransporte: '', otrosdevengos: '', otrasdeducciones: '', diastrabajados: '30' });
   return (
     <Layout>
       <Alerta msg={m.msg} onClose={m.cerrar} />
@@ -181,7 +183,7 @@ export const NominaPage = () => {
         <CardHeader icon="badge" title="Causación de nómina">
           <Btn icon="add" onClick={() => setForm({ anio: Number(hoyCO().slice(0, 4)), mes: Number(hoyCO().slice(5, 7)), descripcion: 'Nómina mensual', empleados: [empleadoVacio()] })}>Nueva nómina</Btn>
         </CardHeader>
-        <p style={{ padding: '0 20px', fontSize: 12, color: '#64748b' }}>Registra la causación contable (gasto, deducciones, aportes y provisiones). Los porcentajes se ajustan en Configuración › Parámetros. La nómina electrónica DIAN se transmite con el proveedor de nómina.</p>
+        <p style={{ padding: '0 20px', fontSize: 12, color: '#64748b' }}>Registra la causación contable (gasto, deducciones, aportes y provisiones). Los porcentajes y el salario mínimo se ajustan en Configuración › Parámetros. Después de causarla, la nómina electrónica se transmite a la DIAN a través de Factus desde el detalle de la nómina.</p>
         <Tabla cargando={lista.isLoading} filas={lista.data ?? []} clave={(n: any) => n.idnomina} onFila={(n: any) => setVer(n.idnomina)} vacio="Sin nóminas" columnas={[
           { label: 'Período', render: (n: any) => `${n.anio}-${String(n.mes).padStart(2, '0')}` },
           { label: 'Descripción', render: (n: any) => n.descripcion },
@@ -198,6 +200,8 @@ export const NominaPage = () => {
             { label: 'Devengado', align: 'right', render: (d: any) => money(d.liquidacion.devengado) },
             { label: 'Salud', align: 'right', render: (d: any) => money(d.liquidacion.salud) },
             { label: 'Pensión', align: 'right', render: (d: any) => money(d.liquidacion.pension) },
+            ...(det.data.detalle.some((d: any) => Number(d.liquidacion.solidaridad) > 0)
+              ? [{ label: 'F. solidaridad', align: 'right' as const, render: (d: any) => money(d.liquidacion.solidaridad) }] : []),
             { label: 'Otras ded.', align: 'right', render: (d: any) => money(d.liquidacion.otrasdeducciones) },
             { label: 'Neto a pagar', align: 'right', render: (d: any) => <b>{money(d.liquidacion.neto)}</b> },
             { label: 'Aportes empleador', align: 'right', render: (d: any) => money(Object.values(d.liquidacion.empleador).reduce((a: number, v: any) => a + Number(v), 0)) },
@@ -207,27 +211,29 @@ export const NominaPage = () => {
             {det.data.estado === 'BORRADOR' && <>
               <Btn variant="secondary" icon="edit" onClick={() => {
                 setForm({
-                  idnomina: det.data.idnomina, anio: det.data.anio, mes: det.data.mes, descripcion: det.data.descripcion,
-                  empleados: det.data.detalle.map((d: any) => ({ tercero: { idtercero: d.idtercero, documento: d.documento, nombre: d.nombre }, idcentro: d.idcentro, salario: String(Number(d.salario)), auxtransporte: String(Number(d.auxtransporte)), otrosdevengos: String(Number(d.otrosdevengos)), otrasdeducciones: String(Number(d.otrasdeducciones)) }))
+                  idnomina: det.data.idnomina, anio: det.data.anio, mes: det.data.mes, descripcion: det.data.descripcion, fechapago: det.data.fechapago?.slice(0, 10) ?? '',
+                  empleados: det.data.detalle.map((d: any) => ({ tercero: { idtercero: d.idtercero, documento: d.documento, nombre: d.nombre }, idcentro: d.idcentro, salario: String(Number(d.salario)), auxtransporte: String(Number(d.auxtransporte)), otrosdevengos: String(Number(d.otrosdevengos)), otrasdeducciones: String(Number(d.otrasdeducciones)), diastrabajados: String(d.diastrabajados ?? 30) }))
                 }); setVer(null);
               }}>Editar</Btn>
               <Btn variant="success" icon="task_alt" disabled={causar.isPending} onClick={() => causar.mutate(det.data.idnomina)}>Causar</Btn>
             </>}
-            {det.data.estado === 'CAUSADA' && <Btn variant="danger" icon="undo" onClick={() => { const mo = pedirMotivo('anular la nómina'); if (mo) anular.mutate({ id: det.data.idnomina, motivo: mo }); }}>Anular (reverso)</Btn>}
+            {det.data.estado === 'CAUSADA' && <Btn variant="danger" icon="undo" disabled={anular.isPending} onClick={() => { const mo = pedirMotivo('anular la nómina (si ya fue validada por la DIAN se enviará una nota de ajuste de eliminación)'); if (mo) anular.mutate({ id: det.data.idnomina, motivo: mo }); }}>{anular.isPending ? 'Anulando…' : 'Anular (reverso)'}</Btn>}
           </div>
+          <NominaElectronicaPanel idnomina={det.data.idnomina} estadoNomina={det.data.estado} ok={m.ok} err={m.err} />
         </Modal>
       )}
       {form && (
         <Modal titulo={form.idnomina ? 'Editar nómina' : 'Nueva nómina'} onClose={() => setForm(null)} ancho={1150}>
-          <Grid cols={3}>
+          <Grid cols={4}>
             <Field label="Año" required><input type="number" value={form.anio} onChange={(e) => setForm({ ...form, anio: Number(e.target.value) })} style={inputStyle} /></Field>
             <Field label="Mes" required><select value={form.mes} onChange={(e) => setForm({ ...form, mes: Number(e.target.value) })} style={inputStyle}>{MESES.map((x, i) => <option key={x} value={i + 1}>{x}</option>)}</select></Field>
             <Field label="Descripción" required><input value={form.descripcion} onChange={(e) => setForm({ ...form, descripcion: e.target.value })} style={inputStyle} /></Field>
+            <Field label="Fecha de pago"><input type="date" value={form.fechapago ?? ''} onChange={(e) => setForm({ ...form, fechapago: e.target.value })} style={inputStyle} title="Por defecto, el último día del mes" /></Field>
           </Grid>
           <div style={{ overflowX: 'auto', marginTop: 12 }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 1000 }}>
               <thead><tr style={{ background: '#f8fafc', fontSize: 10.5, color: '#64748b', textTransform: 'uppercase' }}>
-                {['Empleado (tercero o nuevo)', 'Centro', 'Salario', 'Aux. transporte', 'Otros devengos', 'Otras deducciones', ''].map((h) => <th key={h} style={{ padding: 8, textAlign: 'left' }}>{h}</th>)}
+                {['Empleado (tercero o nuevo)', 'Centro', 'Días', 'Salario', 'Aux. transporte', 'Otros devengos', 'Otras deducciones', ''].map((h) => <th key={h} style={{ padding: 8, textAlign: 'left' }}>{h}</th>)}
               </tr></thead>
               <tbody>
                 {form.empleados.map((e: any, i: number) => {
@@ -242,6 +248,7 @@ export const NominaPage = () => {
                         </div>}
                       </td>
                       <td style={{ padding: 4, width: 160 }}><CentroSelect value={e.idcentro} onChange={(id) => set({ idcentro: id })} /></td>
+                      <td style={{ padding: 4, width: 64 }}><input type="number" min={1} max={30} value={e.diastrabajados ?? '30'} onChange={(ev) => set({ diastrabajados: ev.target.value })} style={{ ...inputStyle, textAlign: 'right' }} aria-label="días trabajados" /></td>
                       {(['salario', 'auxtransporte', 'otrosdevengos', 'otrasdeducciones'] as const).map((k) => (
                         <td key={k} style={{ padding: 4, width: 120 }}><input type="number" min={0} value={e[k]} onChange={(ev) => set({ [k]: ev.target.value })} style={{ ...inputStyle, textAlign: 'right' }} aria-label={k} /></td>
                       ))}
