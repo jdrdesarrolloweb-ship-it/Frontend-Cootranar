@@ -27,8 +27,11 @@ export interface ModalLoginProps {
 
 type Vista = ModoAuth | 'registrado';
 
+const GOOGLE_CLIENT_ID =
+  import.meta.env.VITE_GOOGLE_CLIENT_ID ||
+  '186642839091-tqu5tuisap4q95d2hldn1a0u64cde6p8.apps.googleusercontent.com';
 const GOOGLE_HABILITADO =
-  !!import.meta.env.VITE_GOOGLE_CLIENT_ID && import.meta.env.VITE_GOOGLE_CLIENT_ID !== 'TU_GOOGLE_CLIENT_ID_AQUI';
+  !!GOOGLE_CLIENT_ID && GOOGLE_CLIENT_ID !== 'TU_GOOGLE_CLIENT_ID_AQUI';
 
 const DURACION_MS = 220;
 const TIPOS_DOCUMENTO = ['CC', 'TI', 'CE', 'Pasaporte'];

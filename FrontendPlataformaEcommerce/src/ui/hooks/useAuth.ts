@@ -91,6 +91,13 @@ export const useAuth = () => {
   };
 
   const handleLogout = async () => {
+    const usuarioActual = getUsuario();
+    const primerNombre = usuarioActual?.nombre?.trim().split(/\s+/)[0] || '';
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('cootranar:logout', { detail: { nombre: primerNombre } })
+      );
+    }
     try {
       await logoutCliente(authService);
     } finally {
