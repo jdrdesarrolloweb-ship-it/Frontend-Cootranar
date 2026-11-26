@@ -47,6 +47,7 @@ export const ROUTES = {
   CONT_NOMINA: '/contabilidad/nomina',
   CONT_INTEGRACIONES: '/contabilidad/integraciones',
   CONT_CONFIGURACION: '/contabilidad/configuracion',
+  CONT_LIQUIDACIONES: '/contabilidad/liquidacion-propietarios',
   ALMACEN: '/almacen',
   ALMACEN_VENTA: '/almacen/venta',
   ALMACEN_VENTAS: '/almacen/ventas',

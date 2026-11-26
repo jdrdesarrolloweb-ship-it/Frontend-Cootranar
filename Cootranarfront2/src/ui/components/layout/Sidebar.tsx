@@ -127,6 +127,7 @@ const sections: NavSection[] = [
       { path: ROUTES.CONT_LIBROS, label: 'Libros', icon: 'menu_book', descripcion: 'Balance de prueba, diario, mayor y auxiliares.' },
       { path: ROUTES.CONT_ESTADOS, label: 'Estados financieros', icon: 'account_balance', descripcion: 'Situación financiera, resultados, flujo de efectivo y comparativos.' },
       { path: ROUTES.CONT_TESORERIA, label: 'Tesorería y cartera', icon: 'account_balance_wallet', descripcion: 'Bancos, conciliación, cuentas por pagar y cartera.' },
+      { path: ROUTES.CONT_LIQUIDACIONES, label: 'Liquidación a propietarios', icon: 'request_quote', descripcion: 'Buses propios y de socios, descuentos y pago a propietarios.' },
       { path: ROUTES.CONT_IMPUESTOS, label: 'Impuestos', icon: 'percent', descripcion: 'IVA, retenciones, certificados, exógena e ICA.' },
       { path: ROUTES.CONT_CUENTAS, label: 'Plan de cuentas', icon: 'account_tree', descripcion: 'PUC, cuentas por operación y centros de costo.' },
       { path: ROUTES.CONT_TERCEROS, label: 'Terceros', icon: 'groups', descripcion: 'Clientes, proveedores y empleados con NIT/DV.' },

@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Layout } from '../../components/layout/Layout';
 import { useAuth } from '../../hooks/useAuth';
 import { cont } from '../../../infrastructure/services/contabilidadApi';
-import { Alerta, Badge, Btn, Card, CardHeader, Field, Grid, MESES, Modal, Paginador, Tabla, Tabs, fecha, hoyCO, inputStyle, money, useMensaje } from './contUi';
+import { Alerta, Badge, Btn, Card, CardHeader, CuentaSelect, Field, Grid, MESES, Modal, Paginador, Tabla, Tabs, Valor, fecha, hoyCO, inputStyle, money, useMensaje } from './contUi';
 
 type Tab = 'periodos' | 'empresa' | 'parametros' | 'usuarios' | 'auditoria';
 
@@ -40,8 +40,9 @@ function Periodos({ admin }: { admin: boolean }) {
   const crear = useMutation({ mutationFn: () => cont.post('/periodos/anio', { anio }), onSuccess: () => { m.ok('Períodos del año creados'); inv(); }, onError: (e) => m.err(e) });
   const cierre = useMutation({
     mutationFn: () => cont.post('/cierre-ejercicio', { anio }),
-    onSuccess: (r: any) => { m.ok(`Cierre ${anio}: ${r.utilidad >= 0 ? 'utilidad' : 'pérdida'} de ${money(Math.abs(r.utilidad))} trasladada (CI-${r.numero})`); inv(); }, onError: (e) => m.err(e),
+    onSuccess: (r: any) => { m.ok(`Cierre ${anio}: ${r.utilidad >= 0 ? 'excedente' : 'pérdida'} de ${money(Math.abs(r.utilidad))} (CI-${r.numero}). Ahora registre la aplicación aprobada por la asamblea.`); inv(); }, onError: (e) => m.err(e),
   });
+  const [distribuir, setDistribuir] = useState(false);
   return (
     <>
       <Alerta msg={m.msg} onClose={m.cerrar} />
@@ -49,7 +50,8 @@ function Periodos({ admin }: { admin: boolean }) {
         <CardHeader icon="event_available" title="Períodos contables">
           <input type="number" value={anio} onChange={(e) => setAnio(Number(e.target.value))} style={{ ...inputStyle, width: 100, padding: '7px 10px' }} aria-label="Año" />
           {!q.data?.length && <Btn icon="add" onClick={() => crear.mutate()}>Crear períodos del año</Btn>}
-          {admin && <Btn variant="danger" icon="lock_clock" disabled={cierre.isPending} onClick={() => { if (window.confirm(`¿Generar el comprobante de cierre del ejercicio ${anio} (31 de diciembre)? Traslada ingresos, costos y gastos a utilidad o pérdida.`)) cierre.mutate(); }}>Cierre del ejercicio</Btn>}
+          {admin && <Btn variant="danger" icon="lock_clock" disabled={cierre.isPending} onClick={() => { if (window.confirm(`¿Generar el cierre del ejercicio ${anio} (31 de diciembre)? Traslada los costos de operación (clase 7) al costo del servicio y cancela ingresos, costos y gastos contra el excedente o la pérdida.`)) cierre.mutate(); }}>Cierre del ejercicio</Btn>}
+          <Btn variant="secondary" icon="diversity_3" onClick={() => setDistribuir(true)}>Aplicación del excedente</Btn>
         </CardHeader>
         <Tabla cargando={q.isLoading} filas={q.data ?? []} clave={(p: any) => p.idperiodo} vacio="No existen períodos para este año" columnas={[
           { label: 'Período', render: (p: any) => <b>{MESES[p.mes - 1]} {p.anio}</b> },
@@ -61,7 +63,83 @@ function Periodos({ admin }: { admin: boolean }) {
             : admin && <Btn small variant="ghost" icon="lock_open" onClick={() => accion.mutate({ id: p.idperiodo, que: 'reabrir' })}>Reabrir</Btn> },
         ]} />
       </Card>
+      {distribuir && <DistribucionExcedentes anio={anio} admin={admin} onClose={() => setDistribuir(false)} onOk={(r) => { m.ok(`Aplicación registrada (${r.comprobante})`); setDistribuir(false); inv(); }} />}
     </>
+  );
+}
+
+/**
+ * Aplicación del excedente de la cooperativa (Ley 79 de 1988): compensación de pérdidas
+ * anteriores (art. 55), reserva de protección de aportes 20 %, fondo de educación 20 % y fondo
+ * de solidaridad 10 % (art. 54); el remanente según el acta de asamblea.
+ */
+function DistribucionExcedentes({ anio, admin, onClose, onOk }: { anio: number; admin: boolean; onClose: () => void; onOk: (r: any) => void }) {
+  const [f, setF] = useState<any>({ fecha: `${anio + 1}-03-31`, acta: '', porcReserva: 20, porcEducacion: 20, porcSolidaridad: 10, remanente: [], compensarConReserva: false });
+  const [err, setErr] = useState<string | null>(null);
+  const cuerpo = () => ({
+    ...f, anio, porcReserva: Number(f.porcReserva), porcEducacion: Number(f.porcEducacion), porcSolidaridad: Number(f.porcSolidaridad),
+    remanente: f.remanente.filter((x: any) => x.nombre && Number(x.porcentaje) > 0 && x.idcuenta).map((x: any) => ({ ...x, porcentaje: Number(x.porcentaje) })),
+  });
+  const prev = useQuery({ queryKey: ['cont', 'dist-prev', anio, JSON.stringify(cuerpo())], queryFn: () => cont.post('/cierre-ejercicio/distribucion/previsualizar', cuerpo()), retry: false });
+  const guardar = useMutation({ mutationFn: () => cont.post('/cierre-ejercicio/distribucion', cuerpo()), onSuccess: onOk, onError: (e: any) => setErr(e?.response?.data?.message ?? e.message) });
+  const p: any = prev.data;
+  const filas = !p ? [] : p.tipo === 'PERDIDA'
+    ? [{ c: `Pérdida del ejercicio ${anio}`, v: p.perdida }, { c: 'Se traslada a pérdidas acumuladas', v: p.perdida }, ...(p.compensarConReserva ? [{ c: 'Compensada con la reserva de protección de aportes', v: p.compensarConReserva }] : [])]
+    : [
+      { c: `Excedente del ejercicio ${anio}`, v: p.excedente },
+      ...(p.compensacion ? [{ c: '(−) Compensación de pérdidas anteriores (art. 55)', v: p.compensacion }] : []),
+      { c: `Reserva protección de aportes ${f.porcReserva} %`, v: p.reserva },
+      { c: `Fondo de educación ${f.porcEducacion} %`, v: p.educacion },
+      { c: `Fondo de solidaridad ${f.porcSolidaridad} %`, v: p.solidaridad },
+      ...p.destinos.map((d: any) => ({ c: `${d.nombre} (${d.porcentaje} % del remanente)`, v: d.valor })),
+      ...(p.sinDestino ? [{ c: 'Remanente sin destino (excedentes por distribuir)', v: p.sinDestino }] : []),
+    ];
+  return (
+    <Modal titulo={`Aplicación del resultado del ejercicio ${anio}`} onClose={onClose} ancho={820}>
+      {err && <Alerta msg={{ tipo: 'err', texto: err }} onClose={() => setErr(null)} />}
+      {prev.error && <Alerta msg={{ tipo: 'err', texto: (prev.error as any)?.response?.data?.message ?? 'No se pudo calcular' }} />}
+      {p?.yaDistribuido && <Alerta msg={{ tipo: 'ok', texto: `Ya registrado: ${p.yaDistribuido.comprobante} del ${String(p.yaDistribuido.fecha).slice(0, 10)}` }} />}
+      <Grid cols={2}>
+        <Field label="Fecha del acta de asamblea" required><input type="date" value={f.fecha} onChange={(e) => setF({ ...f, fecha: e.target.value })} style={inputStyle} /></Field>
+        <Field label="Acta (número y fecha)" required><input value={f.acta} placeholder="Acta N.º 45 de asamblea ordinaria" onChange={(e) => setF({ ...f, acta: e.target.value })} style={inputStyle} /></Field>
+      </Grid>
+      {p?.tipo !== 'PERDIDA' ? (
+        <>
+          <Grid cols={3} style={{ marginTop: 12 }}>
+            <Field label="Reserva protección aportes % (mín. 20)"><input type="number" min={20} value={f.porcReserva} onChange={(e) => setF({ ...f, porcReserva: e.target.value })} style={inputStyle} /></Field>
+            <Field label="Fondo de educación % (mín. 20)"><input type="number" min={20} value={f.porcEducacion} onChange={(e) => setF({ ...f, porcEducacion: e.target.value })} style={inputStyle} /></Field>
+            <Field label="Fondo de solidaridad % (mín. 10)"><input type="number" min={10} value={f.porcSolidaridad} onChange={(e) => setF({ ...f, porcSolidaridad: e.target.value })} style={inputStyle} /></Field>
+          </Grid>
+          <h4 style={{ margin: '16px 0 6px', fontSize: 13 }}>Destino del remanente aprobado por la asamblea (% sobre el remanente)</h4>
+          {f.remanente.map((x: any, i: number) => (
+            <div key={i} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 2fr auto', gap: 8, marginBottom: 6 }}>
+              <input placeholder="Revalorización de aportes, retorno a asociados, fondo…" value={x.nombre} onChange={(e) => { const r = [...f.remanente]; r[i] = { ...x, nombre: e.target.value }; setF({ ...f, remanente: r }); }} style={inputStyle} />
+              <input type="number" placeholder="%" value={x.porcentaje} onChange={(e) => { const r = [...f.remanente]; r[i] = { ...x, porcentaje: e.target.value }; setF({ ...f, remanente: r }); }} style={inputStyle} />
+              <CuentaSelect value={x.idcuenta ?? null} onChange={(c) => { const r = [...f.remanente]; r[i] = { ...x, idcuenta: c?.idcuenta ?? null }; setF({ ...f, remanente: r }); }} placeholder="Cuenta…" />
+              <Btn small variant="ghost" icon="delete" title="Quitar" onClick={() => setF({ ...f, remanente: f.remanente.filter((_: any, k: number) => k !== i) })} />
+            </div>
+          ))}
+          <Btn small variant="secondary" icon="add" onClick={() => setF({ ...f, remanente: [...f.remanente, { nombre: '', porcentaje: '', idcuenta: null }] })}>Agregar destino</Btn>
+        </>
+      ) : (
+        <label style={{ display: 'flex', gap: 6, marginTop: 12, fontSize: 13 }}>
+          <input type="checkbox" checked={f.compensarConReserva} onChange={(e) => setF({ ...f, compensarConReserva: e.target.checked })} />
+          Compensar la pérdida con la reserva de protección de aportes (disponible {money(p?.reservaDisponible)})
+        </label>
+      )}
+      <div style={{ marginTop: 16 }}>
+        {prev.isLoading ? <span style={{ color: '#94a3b8' }}>Calculando…</span> : (
+          <Tabla filas={filas} clave={(x: any) => x.c} vacio="—" columnas={[
+            { label: 'Concepto', render: (x: any) => x.c },
+            { label: 'Valor', align: 'right', render: (x: any) => <Valor v={x.v} /> },
+          ]} />
+        )}
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
+        <Btn variant="secondary" onClick={onClose}>Cerrar</Btn>
+        {admin && <Btn icon="check" disabled={!p || p.yaDistribuido || !f.acta.trim() || guardar.isPending} onClick={() => guardar.mutate()}>Registrar aplicación</Btn>}
+      </div>
+    </Modal>
   );
 }
 

@@ -37,6 +37,7 @@ import { ImpuestosPage } from '../pages/contabilidad/ImpuestosPage';
 import { ActivosPage, PresupuestosPage, NominaPage } from '../pages/contabilidad/GestionContablePages';
 import { IntegracionesPage } from '../pages/contabilidad/IntegracionesPage';
 import { ConfiguracionContablePage } from '../pages/contabilidad/ConfiguracionContablePage';
+import { LiquidacionPropietariosPage } from '../pages/contabilidad/LiquidacionPropietariosPage';
 import { OficinasEncomiendasPage } from '../pages/oficinas-encomiendas/OficinasEncomiendasPage';
 import { TarifasEncomiendasPage } from '../pages/encomiendas/TarifasEncomiendasPage';
 import { UsuariosPage } from '../pages/usuarios/UsuariosPage';
@@ -121,6 +122,7 @@ export const AppRouter = () => {
             <Route path={ROUTES.CONT_NOMINA} element={<NominaPage />} />
             <Route path={ROUTES.CONT_INTEGRACIONES} element={<IntegracionesPage />} />
             <Route path={ROUTES.CONT_CONFIGURACION} element={<ConfiguracionContablePage />} />
+            <Route path={ROUTES.CONT_LIQUIDACIONES} element={<LiquidacionPropietariosPage />} />
           </Route>
 
           {/* Rutas exclusivas del Administrador */}
