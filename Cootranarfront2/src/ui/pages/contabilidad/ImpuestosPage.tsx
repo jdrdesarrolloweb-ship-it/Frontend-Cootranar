@@ -89,34 +89,118 @@ function Retenciones() {
   );
 }
 
+/** Columnas de valor de cada formato de exógena (encabezado para Excel → campo). */
+const FORMATOS_EXOGENA: Record<string, { nombre: string; concepto: boolean; valores: [string, string][] }> = {
+  1001: { nombre: 'Pagos o abonos en cuenta y retenciones', concepto: true, valores: [['Pago o abono en cuenta deducible', 'pago'], ['Retención en la fuente practicada renta', 'retefuente'], ['Retención practicada IVA', 'reteiva']] },
+  1005: { nombre: 'IVA descontable', concepto: false, valores: [['Impuesto descontable', 'ivadescontable']] },
+  1006: { nombre: 'IVA generado', concepto: false, valores: [['Impuesto generado', 'ivagenerado']] },
+  1007: { nombre: 'Ingresos recibidos', concepto: true, valores: [['Ingresos brutos recibidos', 'ingreso']] },
+  1008: { nombre: 'Cuentas por cobrar al 31 dic', concepto: true, valores: [['Saldo cuentas por cobrar al 31-12', 'saldo']] },
+  1009: { nombre: 'Pasivos al 31 dic', concepto: true, valores: [['Saldo cuentas por pagar al 31-12', 'saldo']] },
+  1010: { nombre: 'Asociados (aportes)', concepto: false, valores: [['Valor patrimonial aportes al 31-12', 'aporte']] },
+  1647: { nombre: 'Ingresos recibidos para terceros', concepto: false, valores: [['Valor total recibido para terceros', 'recibido'], ['Ingreso propio (descuentos)', 'ingresopropio'], ['Valor trasladado al tercero', 'trasladado']] },
+  2276: { nombre: 'Rentas de trabajo', concepto: false, valores: [['Pagos por salarios', 'salarios'], ['Pagos por prestaciones sociales', 'prestaciones'], ['Auxilio de transporte y otros', 'auxtransporte'], ['Aportes obligatorios salud', 'salud'], ['Aportes obligatorios pensión y FSP', 'pension'], ['Retención en la fuente', 'retefuente']] },
+};
+
+const filaExcel = (f: any, def: typeof FORMATOS_EXOGENA[string]) => ({
+  ...(def.concepto ? { Concepto: f.concepto } : {}),
+  'Tipo de documento': f.tipodoc, 'Número identificación': f.documento, DV: f.dv ?? '',
+  'Primer apellido': f.primerapellido ?? '', 'Segundo apellido': f.segundoapellido ?? '', 'Primer nombre': f.primernombre ?? '', 'Otros nombres': f.otrosnombres ?? '',
+  'Razón social': f.razonsocial ?? (f.cuantiamenor || f.primernombre === undefined ? f.nombre : ''),
+  Dirección: f.direccion ?? '', Municipio: f.ciudad ?? '', 'País': f.pais ?? '169',
+  ...Object.fromEntries(def.valores.map(([t, k]) => [t, Number(f[k] ?? 0)])),
+});
+
 function Exogena() {
-  const [anio, setAnio] = useState(Number(hoyCO().slice(0, 4)));
+  const [anio, setAnio] = useState(Number(hoyCO().slice(0, 4)) - 1);
+  const [formato, setFormato] = useState('1001');
+  const [mapeo, setMapeo] = useState(false);
   const q = useQuery({ queryKey: ['cont', 'exogena', anio], queryFn: () => cont.get(`/tributario/exogena/${anio}`) });
-  const d = q.data;
+  const d: any = q.data;
+  const def = FORMATOS_EXOGENA[formato];
+  const filas: any[] = d?.formatos?.[formato] ?? [];
   return (
-    <Card>
-      <CardHeader icon="description" title="Información exógena (apoyo)">
-        <input type="number" value={anio} onChange={(e) => setAnio(Number(e.target.value))} style={{ ...inputStyle, width: 100, padding: '7px 10px' }} aria-label="Año" />
-        {d && <Btn icon="download" onClick={() => exportarExcel(`exogena-${anio}`, [
-          { nombre: '1001 Pagos', filas: d.formato1001.map((f: any) => ({ 'Tipo doc': f.tipodocumento, Documento: f.documento, DV: f.dv ?? '', 'Razón social / nombre': f.nombre, Concepto: f.cuenta, 'Pago o abono': Number(f.pago), 'Retención en la fuente': Number(f.retefuente) })) },
-          { nombre: '1007 Ingresos', filas: d.formato1007.map((f: any) => ({ 'Tipo doc': f.tipodocumento, Documento: f.documento, DV: f.dv ?? '', 'Razón social / nombre': f.nombre, Concepto: f.cuenta, 'Ingreso bruto': Number(f.ingreso) })) },
-        ])}>Excel (1001 y 1007)</Btn>}
-      </CardHeader>
-      {d && (
-        <div style={{ padding: 16, display: 'grid', gap: 14 }}>
-          <div><b style={{ fontSize: 13 }}>Formato 1001 · pagos o abonos en cuenta ({d.formato1001.length})</b>
-            <Tabla filas={d.formato1001.slice(0, 50)} clave={(f: any) => `${f.documento}-${f.cuenta}`} vacio="Sin datos" columnas={[
-              { label: 'Tercero', render: (f: any) => `${f.documento} · ${f.nombre}` }, { label: 'Concepto', render: (f: any) => f.cuenta },
-              { label: 'Pago', align: 'right', render: (f: any) => money(f.pago) }, { label: 'Retefuente', align: 'right', render: (f: any) => money(f.retefuente) },
-            ]} /></div>
-          <div><b style={{ fontSize: 13 }}>Formato 1007 · ingresos recibidos ({d.formato1007.length})</b>
-            <Tabla filas={d.formato1007.slice(0, 50)} clave={(f: any) => `${f.documento}-${f.cuenta}`} vacio="Sin datos" columnas={[
-              { label: 'Tercero', render: (f: any) => `${f.documento} · ${f.nombre}` }, { label: 'Concepto', render: (f: any) => f.cuenta },
-              { label: 'Ingreso', align: 'right', render: (f: any) => money(f.ingreso) },
-            ]} /></div>
-        </div>
-      )}
-    </Card>
+    <>
+      <Card>
+        <CardHeader icon="description" title="Información exógena (Res. DIAN 000227 de 2025)">
+          <input type="number" value={anio} onChange={(e) => setAnio(Number(e.target.value))} style={{ ...inputStyle, width: 100, padding: '7px 10px' }} aria-label="Año gravable" />
+          <Btn variant="secondary" icon="tune" onClick={() => setMapeo(true)}>Cuentas → conceptos</Btn>
+          {d && <Btn icon="download" onClick={() => exportarExcel(`exogena-${anio}`, Object.entries(FORMATOS_EXOGENA).map(([k, v]) => ({ nombre: k, filas: (d.formatos[k] ?? []).map((f: any) => filaExcel(f, v)) })))}>Excel (todos los formatos)</Btn>}
+        </CardHeader>
+        {q.isLoading && <p style={{ padding: 20, color: '#94a3b8' }}>Generando…</p>}
+        {q.error && <div style={{ padding: 16 }}><Alerta msg={{ tipo: 'err', texto: (q.error as any)?.response?.data?.message ?? 'No se pudo generar' }} /></div>}
+        {d && (
+          <div style={{ padding: 16 }}>
+            <p style={{ fontSize: 12.5, color: '#64748b', marginTop: 0 }}>
+              Año gravable {d.anio} · UVT {money(d.uvt)} · Cuantías menores (NIT 222222222, tipo 43) por debajo de {money(d.topeCuantiaMenor)} y sin retención.
+              Es la base para cargar al prevalidador de la DIAN: revísela con el contador antes de presentarla.
+            </p>
+            {d.advertencias.length > 0 && (
+              <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: '10px 14px', marginBottom: 12, fontSize: 12.5, color: '#92400e' }}>
+                <b>Revise antes de presentar:</b>
+                <ul style={{ margin: '6px 0 0', paddingLeft: 18 }}>{d.advertencias.map((a: string) => <li key={a}>{a}</li>)}</ul>
+              </div>
+            )}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+              {Object.entries(FORMATOS_EXOGENA).map(([k, v]) => (
+                <Btn key={k} small variant={k === formato ? 'primary' : 'secondary'} onClick={() => setFormato(k)} title={v.nombre}>{k} · {d.resumen[k] ?? 0}</Btn>
+              ))}
+            </div>
+            <b style={{ fontSize: 13 }}>Formato {formato} · {def.nombre}</b>
+            <Tabla filas={filas.slice(0, 300)} clave={(f: any) => `${f.concepto}-${f.documento}-${f.tercero}`} vacio="Sin registros para este formato" columnas={[
+              ...(def.concepto ? [{ label: 'Concepto', render: (f: any) => f.concepto }] : []),
+              { label: 'Tipo', render: (f: any) => f.tipodoc },
+              { label: 'Identificación', render: (f: any) => `${f.documento}${f.dv !== '' && f.dv !== null && f.dv !== undefined ? `-${f.dv}` : ''}` },
+              { label: 'Nombre / razón social', render: (f: any) => <>{f.nombre}{!f.cuantiamenor && !f.dian && !f.direccion ? <> <Badge tone="amber">sin dirección</Badge></> : null}</> },
+              ...def.valores.map(([t, k]) => ({ label: t, align: 'right' as const, render: (f: any) => money(f[k]) })),
+            ]} />
+            {filas.length > 300 && <p style={{ fontSize: 12, color: '#64748b' }}>Se muestran 300 de {filas.length}; el Excel trae todos.</p>}
+          </div>
+        )}
+      </Card>
+      {mapeo && <MapeoExogena onClose={() => { setMapeo(false); q.refetch(); }} />}
+    </>
+  );
+}
+
+function MapeoExogena({ onClose }: { onClose: () => void }) {
+  const qc = useQueryClient();
+  const m = useMensaje();
+  const q = useQuery({ queryKey: ['cont', 'exogena', 'mapeo'], queryFn: () => cont.get<any[]>('/tributario/exogena/mapeo') });
+  const [f, setF] = useState<any>({ formato: '1001', prefijo: '', concepto: '', descripcion: '' });
+  const inv = () => qc.invalidateQueries({ queryKey: ['cont', 'exogena'] });
+  const guardar = useMutation({
+    mutationFn: () => (f.idmapeo ? cont.put(`/tributario/exogena/mapeo/${f.idmapeo}`, f) : cont.post('/tributario/exogena/mapeo', f)),
+    onSuccess: () => { m.ok('Regla guardada'); setF({ formato: f.formato, prefijo: '', concepto: '', descripcion: '' }); inv(); }, onError: (e) => m.err(e),
+  });
+  const borrar = useMutation({ mutationFn: (id: number) => cont.del(`/tributario/exogena/mapeo/${id}`), onSuccess: () => { m.ok('Regla eliminada'); inv(); }, onError: (e) => m.err(e) });
+  return (
+    <Modal titulo="Exógena: cuentas del PUC → conceptos DIAN" onClose={onClose} ancho={820}>
+      <Alerta msg={m.msg} onClose={m.cerrar} />
+      <p style={{ fontSize: 12.5, color: '#64748b', marginTop: 0 }}>Cada cuenta toma el concepto de la regla con el prefijo más largo. Ej.: 5135 → 5004 (servicios), 5 → 5016 (demás costos y deducciones).</p>
+      <Grid cols={4}>
+        <Field label="Formato"><select value={f.formato} onChange={(e) => setF({ ...f, formato: e.target.value })} style={inputStyle}>{['1001', '1007', '1008', '1009'].map((x) => <option key={x}>{x}</option>)}</select></Field>
+        <Field label="Prefijo de cuenta"><input value={f.prefijo} onChange={(e) => setF({ ...f, prefijo: e.target.value })} style={inputStyle} placeholder="5135" /></Field>
+        <Field label="Concepto DIAN"><input value={f.concepto} onChange={(e) => setF({ ...f, concepto: e.target.value })} style={inputStyle} placeholder="5004" /></Field>
+        <Field label="Descripción"><input value={f.descripcion ?? ''} onChange={(e) => setF({ ...f, descripcion: e.target.value })} style={inputStyle} /></Field>
+      </Grid>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, margin: '10px 0' }}>
+        {f.idmapeo && <Btn variant="secondary" onClick={() => setF({ formato: f.formato, prefijo: '', concepto: '', descripcion: '' })}>Nueva</Btn>}
+        <Btn icon="save" disabled={!f.prefijo || !f.concepto || guardar.isPending} onClick={() => guardar.mutate()}>{f.idmapeo ? 'Actualizar' : 'Agregar'}</Btn>
+      </div>
+      <Tabla cargando={q.isLoading} filas={q.data ?? []} clave={(x: any) => x.idmapeo} vacio="Sin reglas" columnas={[
+        { label: 'Formato', render: (x: any) => x.formato },
+        { label: 'Cuentas que empiezan por', render: (x: any) => <b>{x.prefijo}</b> },
+        { label: 'Concepto', render: (x: any) => x.concepto },
+        { label: 'Descripción', render: (x: any) => x.descripcion ?? '' },
+        { label: '', render: (x: any) => (
+          <div style={{ display: 'flex', gap: 4 }}>
+            <Btn small variant="ghost" icon="edit" title="Editar" onClick={() => setF({ ...x })} />
+            <Btn small variant="ghost" icon="delete" title="Eliminar" onClick={() => { if (window.confirm(`¿Eliminar la regla ${x.formato} ${x.prefijo} → ${x.concepto}?`)) borrar.mutate(x.idmapeo); }} />
+          </div>
+        ) },
+      ]} />
+    </Modal>
   );
 }
 

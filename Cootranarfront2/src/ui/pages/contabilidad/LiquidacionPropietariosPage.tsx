@@ -13,7 +13,7 @@ import {
  *  - Conceptos: descuentos de la liquidación (administración, rodamiento, fondo de reposición…).
  *  - Liquidaciones: recaudo pendiente − descuentos = neto a pagar al propietario.
  */
-type Tab = 'liquidaciones' | 'vehiculos' | 'conceptos';
+type Tab = 'liquidaciones' | 'extractos' | 'vehiculos' | 'conceptos';
 const TIPOS: Record<string, string> = { PORCENTAJE: '% del recaudo', VALOR_VIAJE: 'Valor por viaje', VALOR_FIJO: 'Valor fijo por liquidación' };
 
 export const LiquidacionPropietariosPage = () => {
@@ -22,10 +22,12 @@ export const LiquidacionPropietariosPage = () => {
     <Layout>
       <Tabs value={tab} onChange={setTab} tabs={[
         { id: 'liquidaciones', label: 'Liquidaciones', icon: 'request_quote' },
+        { id: 'extractos', label: 'Extractos de socios', icon: 'contact_page' },
         { id: 'vehiculos', label: 'Vehículos propios y de socios', icon: 'directions_bus' },
         { id: 'conceptos', label: 'Descuentos', icon: 'tune' },
       ]} />
       {tab === 'liquidaciones' && <Liquidaciones />}
+      {tab === 'extractos' && <Extractos />}
       {tab === 'vehiculos' && <Vehiculos />}
       {tab === 'conceptos' && <Conceptos />}
     </Layout>
@@ -47,6 +49,88 @@ function imprimirLiquidacion(l: any) {
       l.recaudos.map((r: any) => [String(r.fecha).slice(0, 10), r.comprobante, r.detalle ?? '', money(r.valor)]))}` : ''}
     ${l.estado === 'PAGADA' && l.comprobantepago ? `<p>Pagado el ${escHtml(String(l.fechapago).slice(0, 10))} · ${escHtml(l.mediopago)} · ${escHtml(l.referenciapago ?? '')} · ${escHtml(l.comprobantepago)}</p>` : ''}
     <p class="muted" style="margin-top:30px">Elaboró: ______________________ &nbsp;&nbsp; Recibí conforme (propietario): ______________________</p>`);
+}
+
+/** HTML del extracto de un socio (para imprimir uno o varios con salto de página). */
+function htmlExtracto(e: any) {
+  const t = e.tercero;
+  const lado = (c: any) => (c.lado === 'FAVOR' ? 'A favor del socio' : 'A cargo del socio');
+  return `
+    <div style="page-break-after:always">
+    <h1>Extracto del asociado</h1>
+    <div class="muted">${escHtml(e.empresa?.razonsocial ?? 'Cootranar')} · NIT ${escHtml(e.empresa?.nit ?? '')}-${escHtml(e.empresa?.dv ?? '')}</div>
+    <h2>${escHtml(t.nombre)} · ${escHtml(t.tipodocumento)} ${escHtml(t.documento)}</h2>
+    <div class="muted">Período: ${escHtml(e.desde)} a ${escHtml(e.hasta)}${e.vehiculos?.length ? ` · Vehículos: ${escHtml(e.vehiculos.map((v: any) => `${v.numeromovil} (${v.placa})`).join(', '))}` : ''}</div>
+    <h2>Resumen de saldos</h2>
+    ${tablaHtml([{ t: 'Cuenta' }, { t: 'Concepto' }, { t: 'Saldo anterior', r: true }, { t: 'Débitos', r: true }, { t: 'Créditos', r: true }, { t: 'Saldo al corte', r: true }],
+      (e.cuentas ?? []).map((c: any) => [`${c.codigo} ${c.nombre}`, lado(c), money(c.saldoInicial), money(c.debitos), money(c.creditos), money(c.saldoFinal)]),
+      ['', '', '', '', 'Neto a favor del socio', money(e.totales.neto)])}
+    ${e.liquidaciones?.length ? `<h2>Liquidaciones del período</h2>${tablaHtml(
+      [{ t: 'N.º' }, { t: 'Móvil' }, { t: 'Período' }, { t: 'Viajes', r: true }, { t: 'Recaudado', r: true }, { t: 'Descuentos', r: true }, { t: 'Neto', r: true }, { t: 'Estado' }],
+      e.liquidaciones.map((l: any) => [l.idliquidacion, `${l.numeromovil} ${l.placa}`, `${l.desde} a ${l.hasta}`, l.viajes, money(l.totalrecaudado), money(l.totaldescuentos), money(l.neto), l.estado + (l.fechapago ? ` ${l.fechapago}` : '')]),
+      ['', '', '', '', money(e.totales.recaudado), money(e.totales.descuentos), money(e.totales.liquidado), ''])}` : ''}
+    ${e.movimientos?.length ? `<h2>Detalle de movimientos</h2>${tablaHtml([{ t: 'Fecha' }, { t: 'Comprobante' }, { t: 'Cuenta' }, { t: 'Detalle' }, { t: 'Débito', r: true }, { t: 'Crédito', r: true }],
+      e.movimientos.map((m: any) => [m.fecha, m.comprobante, m.codigo, m.detalle ?? '', m.debito ? money(m.debito) : '', m.credito ? money(m.credito) : '']))}` : ''}
+    <p class="muted" style="margin-top:24px">Este extracto se genera de la contabilidad de la cooperativa. Si encuentra diferencias, comuníquese con contabilidad dentro de los 30 días siguientes.</p>
+    </div>`;
+}
+
+function Extractos() {
+  const m = useMensaje();
+  const [desde, setDesde] = useState(inicioMes());
+  const [hasta, setHasta] = useState(hoyCO());
+  const [filtro, setFiltro] = useState('');
+  const [generando, setGenerando] = useState(false);
+  const q = useQuery({ queryKey: ['cont', 'socios', hasta], queryFn: () => cont.get<any[]>('/socios', { hasta }) });
+  const t = filtro.trim().toLowerCase();
+  const filas = (q.data ?? []).filter((s) => !t || `${s.propietario} ${s.documento} ${s.vehiculos.join(' ')}`.toLowerCase().includes(t));
+  const obtener = (s: any) => cont.get(`/socios/${s.idtercero}/extracto`, { desde, hasta });
+  const imprimir = async (lista: any[]) => {
+    const conTercero = lista.filter((s) => s.idtercero);
+    if (!conTercero.length) { m.err(new Error('Los socios seleccionados aún no tienen movimientos contables')); return; }
+    setGenerando(true);
+    try {
+      const extractos = [];
+      for (const s of conTercero) extractos.push(await obtener(s));
+      imprimirDocumento(conTercero.length === 1 ? `Extracto ${conTercero[0].propietario}` : `Extractos ${desde} a ${hasta}`, extractos.map(htmlExtracto).join(''));
+    } catch (e) { m.err(e); } finally { setGenerando(false); }
+  };
+  const excel = async (s: any) => {
+    try {
+      const e: any = await obtener(s);
+      exportarExcel(`extracto-${s.documento}-${desde}-${hasta}`, [
+        { nombre: 'Saldos', filas: e.cuentas.map((c: any) => ({ Cuenta: c.codigo, Nombre: c.nombre, Lado: c.lado === 'FAVOR' ? 'A favor' : 'A cargo', 'Saldo anterior': c.saldoInicial, Débitos: c.debitos, Créditos: c.creditos, 'Saldo al corte': c.saldoFinal })) },
+        { nombre: 'Liquidaciones', filas: e.liquidaciones.map((l: any) => ({ N: l.idliquidacion, Movil: l.numeromovil, Desde: l.desde, Hasta: l.hasta, Viajes: l.viajes, Recaudado: l.totalrecaudado, Descuentos: l.totaldescuentos, Neto: l.neto, Estado: l.estado })) },
+        { nombre: 'Movimientos', filas: e.movimientos.map((x: any) => ({ Fecha: x.fecha, Comprobante: x.comprobante, Cuenta: x.codigo, Detalle: x.detalle, Debito: x.debito, Credito: x.credito })) },
+      ]);
+    } catch (err) { m.err(err); }
+  };
+  return (
+    <>
+      <Alerta msg={m.msg} onClose={m.cerrar} />
+      <Card>
+        <CardHeader icon="contact_page" title="Extractos de socios (propietarios de buses vinculados)">
+          <FiltroFechas desde={desde} hasta={hasta} onDesde={setDesde} onHasta={setHasta} />
+          <input placeholder="Buscar socio, documento o móvil…" value={filtro} onChange={(e) => setFiltro(e.target.value)} style={{ ...inputStyle, width: 240, padding: '7px 10px' }} />
+          <Btn icon="print" disabled={generando || !filas.length} onClick={() => imprimir(filas)}>{generando ? 'Generando…' : `Imprimir ${filas.length} extracto(s)`}</Btn>
+        </CardHeader>
+        <p style={{ padding: '0 20px', fontSize: 12.5, color: '#64748b' }}>Saldos al {hasta}: <b>a favor</b> = lo que la cooperativa le debe (recaudos por liquidar, liquidaciones por pagar, fondo de reposición); <b>a cargo</b> = lo que el socio debe (almacén a crédito, saldos de liquidaciones).</p>
+        <Tabla cargando={q.isLoading} filas={filas} clave={(s: any) => s.idusuario} vacio="No hay buses de socios registrados" columnas={[
+          { label: 'Socio', render: (s: any) => <><b>{s.propietario}</b><div style={{ fontSize: 11.5, color: '#64748b' }}>{s.documento}</div></> },
+          { label: 'Vehículos', render: (s: any) => s.vehiculos.join(', ') },
+          { label: 'A favor', align: 'right', render: (s: any) => money(s.aFavor) },
+          { label: 'A cargo', align: 'right', render: (s: any) => money(s.aCargo) },
+          { label: 'Neto', align: 'right', render: (s: any) => <Valor v={s.neto} fuerte /> },
+          { label: '', render: (s: any) => (
+            <div style={{ display: 'flex', gap: 4 }}>
+              <Btn small variant="secondary" icon="print" disabled={!s.idtercero || generando} onClick={() => imprimir([s])}>Extracto</Btn>
+              <Btn small variant="ghost" icon="download" title="Excel" disabled={!s.idtercero} onClick={() => excel(s)} />
+            </div>
+          ) },
+        ]} />
+      </Card>
+    </>
+  );
 }
 
 function Liquidaciones() {

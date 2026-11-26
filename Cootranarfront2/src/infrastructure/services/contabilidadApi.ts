@@ -13,6 +13,7 @@ export const cont = {
   post: async <T = any>(ruta: string, body?: unknown): Promise<T> => (await httpClient.post(base + ruta, body ?? {})).data.data,
   put: async <T = any>(ruta: string, body?: unknown): Promise<T> => (await httpClient.put(base + ruta, body ?? {})).data.data,
   patch: async <T = any>(ruta: string, body?: unknown): Promise<T> => (await httpClient.patch(base + ruta, body ?? {})).data.data,
+  del: async <T = any>(ruta: string): Promise<T> => (await httpClient.delete(base + ruta)).data.data,
 };
 
 export interface Cuenta {
