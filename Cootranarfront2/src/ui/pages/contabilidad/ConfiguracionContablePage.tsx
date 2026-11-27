@@ -5,8 +5,9 @@ import { useAuth } from '../../hooks/useAuth';
 import { cont } from '../../../infrastructure/services/contabilidadApi';
 import { Alerta, Badge, Btn, Card, CardHeader, CuentaSelect, Field, Grid, MESES, Modal, Paginador, Tabla, Tabs, Valor, fecha, hoyCO, inputStyle, money, useMensaje } from './contUi';
 import { TiposComprobante } from './ComplementosContables';
+import { ResolucionesPanel, UnificarPanel } from './HerramientasContables';
 
-type Tab = 'periodos' | 'empresa' | 'parametros' | 'tipos' | 'usuarios' | 'auditoria';
+type Tab = 'periodos' | 'empresa' | 'parametros' | 'tipos' | 'resoluciones' | 'unificar' | 'usuarios' | 'auditoria';
 
 export const ConfiguracionContablePage = () => {
   const { user } = useAuth();
@@ -16,13 +17,16 @@ export const ConfiguracionContablePage = () => {
     <Layout>
       <Tabs value={tab} onChange={setTab} tabs={[
         { id: 'periodos', label: 'Períodos y cierre', icon: 'event_available' }, { id: 'empresa', label: 'Empresa', icon: 'business' },
-        { id: 'parametros', label: 'Parámetros', icon: 'tune' }, { id: 'tipos', label: 'Tipos de comprobante', icon: 'article' }, ...(admin ? [{ id: 'usuarios' as const, label: 'Contadores', icon: 'manage_accounts' }] : []),
+        { id: 'parametros', label: 'Parámetros', icon: 'tune' }, { id: 'tipos', label: 'Tipos de comprobante', icon: 'article' }, { id: 'resoluciones', label: 'Resoluciones DIAN', icon: 'verified' },
+        { id: 'unificar', label: 'Unificar entidades', icon: 'merge' }, ...(admin ? [{ id: 'usuarios' as const, label: 'Contadores', icon: 'manage_accounts' }] : []),
         { id: 'auditoria', label: 'Auditoría', icon: 'policy' },
       ]} />
       {tab === 'periodos' && <Periodos admin={admin} />}
       {tab === 'empresa' && <Empresa admin={admin} />}
       {tab === 'parametros' && <Parametros />}
       {tab === 'tipos' && <TiposComprobante />}
+      {tab === 'resoluciones' && <ResolucionesPanel />}
+      {tab === 'unificar' && <UnificarPanel />}
       {tab === 'usuarios' && admin && <Usuarios />}
       {tab === 'auditoria' && <Auditoria />}
     </Layout>

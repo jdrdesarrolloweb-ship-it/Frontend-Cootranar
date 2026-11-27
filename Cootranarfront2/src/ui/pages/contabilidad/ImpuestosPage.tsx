@@ -8,8 +8,9 @@ import {
   hoyCO, imprimirDocumento, inicioMes, inputStyle, money, tablaHtml, useMensaje,
 } from './contUi';
 import { RentaPanel } from './ComplementosContables';
+import { ReasignarBasesPanel } from './HerramientasContables';
 
-type Tab = 'config' | 'iva' | 'retenciones' | 'exogena' | 'ica' | 'renta';
+type Tab = 'config' | 'iva' | 'retenciones' | 'exogena' | 'ica' | 'renta' | 'bases';
 
 export const ImpuestosPage = () => {
   const [tab, setTab] = useState<Tab>('iva');
@@ -19,6 +20,7 @@ export const ImpuestosPage = () => {
         { id: 'iva', label: 'IVA', icon: 'percent' }, { id: 'retenciones', label: 'Retenciones y certificados', icon: 'receipt' },
         { id: 'exogena', label: 'Información exógena', icon: 'description' }, { id: 'ica', label: 'ICA', icon: 'location_city' },
         { id: 'renta', label: 'Impuesto de renta', icon: 'account_balance' },
+        { id: 'bases', label: 'Reasignar bases', icon: 'calculate' },
         { id: 'config', label: 'Configuración', icon: 'settings' },
       ]} />
       <p style={{ fontSize: 12, color: '#64748b', marginTop: -6 }}>Informes de apoyo para las declaraciones. Deben ser revisados por el contador frente a las especificaciones vigentes de la DIAN y del municipio.</p>
@@ -27,6 +29,7 @@ export const ImpuestosPage = () => {
       {tab === 'exogena' && <Exogena />}
       {tab === 'ica' && <Ica />}
       {tab === 'renta' && <RentaPanel />}
+      {tab === 'bases' && <ReasignarBasesPanel />}
       {tab === 'config' && <Config />}
     </Layout>
   );

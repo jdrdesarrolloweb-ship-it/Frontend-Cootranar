@@ -6,19 +6,22 @@ import {
   Alerta, Badge, Btn, Card, CardHeader, CuentaSelect, Field, FiltroFechas, Grid, Modal, Tabla, Tabs, Valor, exportarExcel, hoyCO,
   inputStyle, useMensaje,
 } from './contUi';
+import { NivelesPucPanel } from './HerramientasContables';
 
 export const PlanCuentasPage = () => {
-  const [tab, setTab] = useState<'puc' | 'conceptos' | 'centros'>('puc');
+  const [tab, setTab] = useState<'puc' | 'conceptos' | 'centros' | 'niveles'>('puc');
   return (
     <Layout>
       <Tabs value={tab} onChange={setTab} tabs={[
         { id: 'puc', label: 'Plan de cuentas', icon: 'account_tree' },
         { id: 'conceptos', label: 'Cuentas por operación', icon: 'tune' },
         { id: 'centros', label: 'Centros de costo', icon: 'hub' },
+        { id: 'niveles', label: 'Niveles del PUC', icon: 'stacked_bar_chart' },
       ]} />
       {tab === 'puc' && <Puc />}
       {tab === 'conceptos' && <Conceptos />}
       {tab === 'centros' && <Centros />}
+      {tab === 'niveles' && <NivelesPucPanel />}
     </Layout>
   );
 };
