@@ -57,13 +57,22 @@ const getPageHeaderInfo = (pathname: string) => {
     [ROUTES.CONT_NOMINA]: 'Nómina',
     [ROUTES.CONT_INTEGRACIONES]: 'Integraciones Contables',
     [ROUTES.CONT_CONFIGURACION]: 'Configuración Contable',
+    [ROUTES.CONT_LIQUIDACIONES]: 'Extractos por Bus',
+    [ROUTES.CONT_EXT_CARGOS]: 'Cargos al Socio',
+    [ROUTES.CONT_EXT_EXPRESOS]: 'Expresos',
+    [ROUTES.CONT_EXT_TRASLADOS]: 'Traslados de Recaudo',
+    [ROUTES.CONT_EXT_AGENCIAS]: 'Producido por Agencia',
+    [ROUTES.CONT_EXT_SOCIOS]: 'Extractos de Socios',
+    [ROUTES.CONT_EXT_VEHICULOS]: 'Vehículos Propios y de Socios',
+    [ROUTES.CONT_EXT_CONCEPTOS]: 'Descuentos y Cargos',
   };
+  const esExtracto = pathname === ROUTES.CONT_LIQUIDACIONES || pathname.startsWith('/contabilidad/extractos/');
   if (titulosContables[pathname]) {
     return {
       title: titulosContables[pathname],
       breadcrumbs: (
         <>
-          Inicio &rsaquo; {pathname === ROUTES.CAJA ? 'Caja' : 'Contabilidad'} &rsaquo;{' '}
+          Inicio &rsaquo; {pathname === ROUTES.CAJA ? 'Caja' : esExtracto ? 'Extractos de buses' : 'Contabilidad'} &rsaquo;{' '}
           <span style={{ color: '#0D3B8E', fontWeight: 600 }}>{titulosContables[pathname]}</span>
         </>
       ),

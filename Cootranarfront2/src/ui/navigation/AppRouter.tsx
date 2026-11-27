@@ -37,7 +37,10 @@ import { ImpuestosPage } from '../pages/contabilidad/ImpuestosPage';
 import { ActivosPage, PresupuestosPage, NominaPage } from '../pages/contabilidad/GestionContablePages';
 import { IntegracionesPage } from '../pages/contabilidad/IntegracionesPage';
 import { ConfiguracionContablePage } from '../pages/contabilidad/ConfiguracionContablePage';
-import { LiquidacionPropietariosPage } from '../pages/contabilidad/LiquidacionPropietariosPage';
+import {
+  LiquidacionPropietariosPage, CargosSocioPage, ExpresosPage, TrasladosRecaudoPage, ProducidoAgenciasPage, ExtractosSociosPage,
+  VehiculosSociosPage, ConceptosExtractoPage,
+} from '../pages/contabilidad/LiquidacionPropietariosPage';
 import { OficinasEncomiendasPage } from '../pages/oficinas-encomiendas/OficinasEncomiendasPage';
 import { TarifasEncomiendasPage } from '../pages/encomiendas/TarifasEncomiendasPage';
 import { UsuariosPage } from '../pages/usuarios/UsuariosPage';
@@ -123,6 +126,13 @@ export const AppRouter = () => {
             <Route path={ROUTES.CONT_INTEGRACIONES} element={<IntegracionesPage />} />
             <Route path={ROUTES.CONT_CONFIGURACION} element={<ConfiguracionContablePage />} />
             <Route path={ROUTES.CONT_LIQUIDACIONES} element={<LiquidacionPropietariosPage />} />
+            <Route path={ROUTES.CONT_EXT_CARGOS} element={<CargosSocioPage />} />
+            <Route path={ROUTES.CONT_EXT_EXPRESOS} element={<ExpresosPage />} />
+            <Route path={ROUTES.CONT_EXT_TRASLADOS} element={<TrasladosRecaudoPage />} />
+            <Route path={ROUTES.CONT_EXT_AGENCIAS} element={<ProducidoAgenciasPage />} />
+            <Route path={ROUTES.CONT_EXT_SOCIOS} element={<ExtractosSociosPage />} />
+            <Route path={ROUTES.CONT_EXT_VEHICULOS} element={<VehiculosSociosPage />} />
+            <Route path={ROUTES.CONT_EXT_CONCEPTOS} element={<ConceptosExtractoPage />} />
           </Route>
 
           {/* Rutas exclusivas del Administrador */}

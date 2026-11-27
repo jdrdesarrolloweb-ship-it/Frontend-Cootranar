@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Layout } from '../../components/layout/Layout';
 import { cont } from '../../../infrastructure/services/contabilidadApi';
 import {
-  Alerta, Badge, Btn, Card, CardHeader, CuentaSelect, Field, FiltroFechas, Grid, Kpi, Modal, Tabla, Tabs, Valor,
+  Alerta, Badge, Btn, Card, CardHeader, CuentaSelect, Field, FiltroFechas, Grid, Kpi, Modal, Tabla, Valor,
   escHtml, exportarExcel, hoyCO, imprimirDocumento, inicioMes, inputStyle, money, pedirMotivo, tablaHtml, useMensaje,
 } from './contUi';
 import { CargosSocio, ConceptosCargo, Expresos, ProducidoAgencias, Traslados } from './ExtractoBusesPanels';
@@ -16,36 +16,19 @@ import { CargosSocio, ConceptosCargo, Expresos, ProducidoAgencias, Traslados } f
  *  - Cargos al socio (combustible, taller, conduces, anticipos, nómina…), saldo en rojo anterior e interés.
  *  - Neto a pagar al propietario o nuevo saldo en rojo.
  */
-type Tab = 'liquidaciones' | 'cargos' | 'expresos' | 'traslados' | 'agencias' | 'extractos' | 'vehiculos' | 'conceptos';
 const TIPOS: Record<string, string> = { PORCENTAJE: '% de la base', VALOR_PASAJERO: 'Valor por pasajero', VALOR_VIAJE: 'Valor por viaje', VALOR_FIJO: 'Valor fijo por liquidación' };
 const FUENTES: Record<string, string> = { PASAJES: 'Pasajes (VH01)', ENCOMIENDAS: 'Encomiendas (VH09)', EXPRESOS: 'Expresos (VH10)' };
 const etiquetaDesc = (d: any) => `${d.nombre}${d.tipo === 'PORCENTAJE' ? ` ${Number(d.tasa)} %` : d.tipo === 'VALOR_PASAJERO' ? ` × ${Number(d.base)} pasajeros` : d.tipo === 'VALOR_VIAJE' ? ` × ${Number(d.base)} viajes` : ''}`;
 
-export const LiquidacionPropietariosPage = () => {
-  const [tab, setTab] = useState<Tab>('liquidaciones');
-  return (
-    <Layout>
-      <Tabs value={tab} onChange={setTab} tabs={[
-        { id: 'liquidaciones', label: 'Extractos por bus', icon: 'request_quote' },
-        { id: 'cargos', label: 'Cargos al socio', icon: 'receipt_long' },
-        { id: 'expresos', label: 'Expresos', icon: 'airport_shuttle' },
-        { id: 'traslados', label: 'Traslados', icon: 'swap_horiz' },
-        { id: 'agencias', label: 'Por agencia', icon: 'storefront' },
-        { id: 'extractos', label: 'Extractos de socios', icon: 'contact_page' },
-        { id: 'vehiculos', label: 'Vehículos propios y de socios', icon: 'directions_bus' },
-        { id: 'conceptos', label: 'Descuentos', icon: 'tune' },
-      ]} />
-      {tab === 'liquidaciones' && <Liquidaciones />}
-      {tab === 'cargos' && <CargosSocio />}
-      {tab === 'expresos' && <Expresos />}
-      {tab === 'traslados' && <Traslados />}
-      {tab === 'agencias' && <ProducidoAgencias />}
-      {tab === 'extractos' && <Extractos />}
-      {tab === 'vehiculos' && <Vehiculos />}
-      {tab === 'conceptos' && <Conceptos />}
-    </Layout>
-  );
-};
+// Cada función del extracto tiene su propia página (sección «Extractos de buses» del menú).
+export const LiquidacionPropietariosPage = () => <Layout><Liquidaciones /></Layout>;
+export const CargosSocioPage = () => <Layout><CargosSocio /></Layout>;
+export const ExpresosPage = () => <Layout><Expresos /></Layout>;
+export const TrasladosRecaudoPage = () => <Layout><Traslados /></Layout>;
+export const ProducidoAgenciasPage = () => <Layout><ProducidoAgencias /></Layout>;
+export const ExtractosSociosPage = () => <Layout><Extractos /></Layout>;
+export const VehiculosSociosPage = () => <Layout><Vehiculos /></Layout>;
+export const ConceptosExtractoPage = () => <Layout><Conceptos /></Layout>;
 
 function imprimirLiquidacion(l: any) {
   const det = l.detalle ?? [];
