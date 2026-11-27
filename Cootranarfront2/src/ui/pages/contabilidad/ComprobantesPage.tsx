@@ -7,6 +7,7 @@ import {
   Alerta, Badge, BLUE, Btn, Card, CardHeader, CentroSelect, CuentaSelect, Field, FiltroFechas, Grid, Modal, Paginador, Tabla,
   TerceroPicker, Valor, escHtml, hoyCO, imprimirDocumento, inicioMes, inputStyle, money, pedirMotivo, tablaHtml, useMensaje,
 } from './contUi';
+import { DocumentosAutomaticos } from './ComplementosContables';
 
 const tonoEstado: Record<string, 'green' | 'amber' | 'red' | 'gray'> = { CONTABILIZADO: 'green', BORRADOR: 'amber', ANULADO: 'red', REVERSADO: 'gray' };
 
@@ -23,6 +24,7 @@ export const ComprobantesPage = () => {
   const [busqueda, setBusqueda] = useState('');
   const [page, setPage] = useState(1);
   const [ver, setVer] = useState<number | null>(null);
+  const [automaticos, setAutomaticos] = useState(false);
   const [editor, setEditor] = useState<{ id?: number; tipo: string; fecha: string; descripcion: string; lineas: Linea[] } | null>(null);
 
   const tipos = useQuery({ queryKey: ['cont', 'tipos'], queryFn: () => cont.get<any[]>('/tipos-comprobante'), staleTime: 300_000 });
@@ -90,6 +92,7 @@ export const ComprobantesPage = () => {
             <option value="">Todos los estados</option>{Object.keys(tonoEstado).map((s) => <option key={s}>{s}</option>)}
           </select>
           <input value={busqueda} onChange={(e) => { setBusqueda(e.target.value); setPage(1); }} placeholder="Buscar descripción" style={{ ...inputStyle, width: 180, padding: '7px 10px' }} />
+          <Btn variant="secondary" icon="event_repeat" onClick={() => setAutomaticos(true)}>Documentos automáticos</Btn>
           <Btn icon="add" onClick={() => setEditor({ tipo: 'CD', fecha: hoyCO(), descripcion: '', lineas: [lineaVacia(), lineaVacia()] })}>Nuevo comprobante</Btn>
         </CardHeader>
         <Tabla cargando={q.isLoading} filas={q.data?.items ?? []} clave={(c: any) => c.idcomprobante} onFila={(c: any) => setVer(c.idcomprobante)} columnas={[
@@ -145,7 +148,7 @@ export const ComprobantesPage = () => {
           <Grid cols={3}>
             <Field label="Tipo" required>
               <select value={editor.tipo} onChange={(e) => setEditor({ ...editor, tipo: e.target.value })} style={inputStyle} disabled={!!editor.id}>
-                {(tipos.data ?? []).filter((t) => t.manual).map((t) => <option key={t.codigo} value={t.codigo}>{t.codigo} · {t.nombre}</option>)}
+                {(tipos.data ?? []).filter((t) => t.manual && t.activo !== false).map((t) => <option key={t.codigo} value={t.codigo}>{t.codigo} · {t.nombre}</option>)}
               </select>
             </Field>
             <Field label="Fecha" required>
@@ -189,6 +192,7 @@ export const ComprobantesPage = () => {
           <p style={{ fontSize: 11.5, color: BLUE, marginBottom: 0 }}>Un comprobante contabilizado no se edita ni se borra: se corrige con un reverso.</p>
         </Modal>
       )}
+      {automaticos && <DocumentosAutomaticos onClose={() => setAutomaticos(false)} />}
     </Layout>
   );
 };

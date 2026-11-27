@@ -6,27 +6,40 @@ import {
   Alerta, Badge, Btn, Card, CardHeader, CuentaSelect, Field, FiltroFechas, Grid, Kpi, Modal, Tabla, Tabs, Valor,
   escHtml, exportarExcel, hoyCO, imprimirDocumento, inicioMes, inputStyle, money, pedirMotivo, tablaHtml, useMensaje,
 } from './contUi';
+import { CargosSocio, ConceptosCargo, Expresos, ProducidoAgencias, Traslados } from './ExtractoBusesPanels';
 
 /**
- * Liquidación a propietarios de vehículos (socios).
- *  - Vehículos: propios de la cooperativa (el pasaje es ingreso) o de socios (recaudo para terceros).
- *  - Conceptos: descuentos de la liquidación (administración, rodamiento, fondo de reposición…).
- *  - Liquidaciones: recaudo pendiente − descuentos = neto a pagar al propietario.
+ * Extracto mensual de los buses de socios (liquidación a propietarios).
+ *  - Ingresos: VH01 pasajes · VH09 encomiendas · VH10 expresos.
+ *  - Descuentos: seguro por pasajero ($250 RCC + $250 RCE), administración 12 % pasajes y 10 % expresos,
+ *    fondo de reposición 1 %, aporte a capital 3 %, fondo vehicular 2 %, fondo de accidentes 1 %.
+ *  - Cargos al socio (combustible, taller, conduces, anticipos, nómina…), saldo en rojo anterior e interés.
+ *  - Neto a pagar al propietario o nuevo saldo en rojo.
  */
-type Tab = 'liquidaciones' | 'extractos' | 'vehiculos' | 'conceptos';
-const TIPOS: Record<string, string> = { PORCENTAJE: '% del recaudo', VALOR_VIAJE: 'Valor por viaje', VALOR_FIJO: 'Valor fijo por liquidación' };
+type Tab = 'liquidaciones' | 'cargos' | 'expresos' | 'traslados' | 'agencias' | 'extractos' | 'vehiculos' | 'conceptos';
+const TIPOS: Record<string, string> = { PORCENTAJE: '% de la base', VALOR_PASAJERO: 'Valor por pasajero', VALOR_VIAJE: 'Valor por viaje', VALOR_FIJO: 'Valor fijo por liquidación' };
+const FUENTES: Record<string, string> = { PASAJES: 'Pasajes (VH01)', ENCOMIENDAS: 'Encomiendas (VH09)', EXPRESOS: 'Expresos (VH10)' };
+const etiquetaDesc = (d: any) => `${d.nombre}${d.tipo === 'PORCENTAJE' ? ` ${Number(d.tasa)} %` : d.tipo === 'VALOR_PASAJERO' ? ` × ${Number(d.base)} pasajeros` : d.tipo === 'VALOR_VIAJE' ? ` × ${Number(d.base)} viajes` : ''}`;
 
 export const LiquidacionPropietariosPage = () => {
   const [tab, setTab] = useState<Tab>('liquidaciones');
   return (
     <Layout>
       <Tabs value={tab} onChange={setTab} tabs={[
-        { id: 'liquidaciones', label: 'Liquidaciones', icon: 'request_quote' },
+        { id: 'liquidaciones', label: 'Extractos por bus', icon: 'request_quote' },
+        { id: 'cargos', label: 'Cargos al socio', icon: 'receipt_long' },
+        { id: 'expresos', label: 'Expresos', icon: 'airport_shuttle' },
+        { id: 'traslados', label: 'Traslados', icon: 'swap_horiz' },
+        { id: 'agencias', label: 'Por agencia', icon: 'storefront' },
         { id: 'extractos', label: 'Extractos de socios', icon: 'contact_page' },
         { id: 'vehiculos', label: 'Vehículos propios y de socios', icon: 'directions_bus' },
         { id: 'conceptos', label: 'Descuentos', icon: 'tune' },
       ]} />
       {tab === 'liquidaciones' && <Liquidaciones />}
+      {tab === 'cargos' && <CargosSocio />}
+      {tab === 'expresos' && <Expresos />}
+      {tab === 'traslados' && <Traslados />}
+      {tab === 'agencias' && <ProducidoAgencias />}
       {tab === 'extractos' && <Extractos />}
       {tab === 'vehiculos' && <Vehiculos />}
       {tab === 'conceptos' && <Conceptos />}
@@ -35,16 +48,28 @@ export const LiquidacionPropietariosPage = () => {
 };
 
 function imprimirLiquidacion(l: any) {
-  imprimirDocumento(`Liquidación ${l.idliquidacion}`, `
-    <h1>Liquidación a propietario N.º ${l.idliquidacion}</h1>
+  const det = l.detalle ?? [];
+  const ingresos: any[] = l.resumen?.ingresos ?? [{ codigo: 'VH01', nombre: 'Producido de pasajes', valor: l.totalrecaudado, pasajeros: l.pasajeros }];
+  const grupo = (g: string) => det.filter((d: any) => (d.grupo ?? 'DESCUENTO') === g);
+  const cargos = grupo('CARGO');
+  imprimirDocumento(`Extracto ${l.numeromovil} ${String(l.desde).slice(0, 10)}`, `
+    <h1>Extracto del vehículo · Liquidación N.º ${l.idliquidacion}</h1>
     <div class="muted">Móvil ${escHtml(l.numeromovil)} · Placa ${escHtml(l.placa)} · Propietario: ${escHtml(l.propietario)} (${escHtml(l.documento)})</div>
-    <div class="muted">Período: ${escHtml(l.desde)} a ${escHtml(l.hasta)} · Viajes: ${l.viajes} · Comprobante ${escHtml(l.comprobante ?? '')} · Estado ${escHtml(l.estado)}</div>
-    <h2>Resumen</h2>
-    ${tablaHtml([{ t: 'Concepto' }, { t: 'Base', r: true }, { t: 'Valor', r: true }], [
-      ['Pasajes recaudados', '', money(l.totalrecaudado)],
-      ...(l.detalle ?? []).map((d: any) => [`(−) ${d.nombre}${d.tipo === 'PORCENTAJE' ? ` ${Number(d.tasa)} %` : ''}`,
-        d.tipo === 'PORCENTAJE' ? money(d.base) : d.tipo === 'VALOR_VIAJE' ? `${Number(d.base)} viajes` : '', money(d.valor)]),
-    ], ['Neto a pagar', '', money(l.neto)])}
+    <div class="muted">Período: ${escHtml(String(l.desde).slice(0, 10))} a ${escHtml(String(l.hasta).slice(0, 10))} · Viajes: ${l.viajes} · Pasajeros: ${l.pasajeros ?? ''} · Comprobante ${escHtml(l.comprobante ?? '')} · Estado ${escHtml(l.estado)}</div>
+    <h2>Ingresos del bus</h2>
+    ${tablaHtml([{ t: 'Código' }, { t: 'Concepto' }, { t: 'Pasajeros', r: true }, { t: 'Valor', r: true }],
+      ingresos.filter((i) => Number(i.valor)).map((i) => [i.codigo, i.nombre, i.pasajeros || '', money(i.valor)]), ['', 'Total ingresos', '', money(l.totalrecaudado)])}
+    ${l.resumen?.agencias?.length ? `<h2>Pasajes por agencia</h2>${tablaHtml([{ t: 'Agencia' }, { t: 'Pasajeros', r: true }, { t: 'Valor', r: true }],
+      l.resumen.agencias.map((a: any) => [a.agencia, a.pasajeros, money(a.valor)]))}` : ''}
+    <h2>Descuentos</h2>
+    ${tablaHtml([{ t: 'Concepto' }, { t: 'Base', r: true }, { t: 'Valor', r: true }],
+      grupo('DESCUENTO').map((d: any) => [etiquetaDesc(d), d.tipo === 'PORCENTAJE' ? money(d.base) : '', money(d.valor)]), ['Total descuentos', '', money(l.totaldescuentos)])}
+    ${cargos.length ? `<h2>Cargos y abonos</h2>${tablaHtml([{ t: 'Concepto' }, { t: 'Valor', r: true }], cargos.map((d: any) => [d.nombre, money(d.valor)]), ['Total cargos', money(l.totalcargos)])}` : ''}
+    ${Number(l.saldoanterior) ? `<h2>Saldo anterior</h2>${tablaHtml([{ t: 'Concepto' }, { t: 'Valor', r: true }], [
+      [Number(l.saldoanterior) > 0 ? 'Saldo en rojo del extracto anterior' : 'Saldo a favor del extracto anterior', money(l.saldoanterior)],
+      ...(Number(l.interesmora) ? [[`Interés de mora ${l.resumen?.tasaMora ?? ''} %`, money(l.interesmora)]] : [])])}` : ''}
+    <h2>${Number(l.neto) >= 0 ? 'Neto a pagar al propietario' : 'Saldo en rojo (pasa al siguiente extracto)'}: ${money(l.neto)}</h2>
+    ${l.encomiendas?.length ? `<h2>Encomiendas incluidas</h2>${tablaHtml([{ t: 'Guía' }, { t: 'Valor', r: true }], l.encomiendas.map((e: any) => [e.referenciaencomienda, money(e.valor)]))}` : ''}
     ${l.recaudos?.length ? `<h2>Recaudos incluidos</h2>${tablaHtml([{ t: 'Fecha' }, { t: 'Comprobante' }, { t: 'Detalle' }, { t: 'Valor', r: true }],
       l.recaudos.map((r: any) => [String(r.fecha).slice(0, 10), r.comprobante, r.detalle ?? '', money(r.valor)]))}` : ''}
     ${l.estado === 'PAGADA' && l.comprobantepago ? `<p>Pagado el ${escHtml(String(l.fechapago).slice(0, 10))} · ${escHtml(l.mediopago)} · ${escHtml(l.referenciapago ?? '')} · ${escHtml(l.comprobantepago)}</p>` : ''}
@@ -153,17 +178,20 @@ function Liquidaciones() {
     <>
       <Alerta msg={m.msg} onClose={m.cerrar} />
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 12, marginBottom: 16 }}>
-        <Kpi label="Recaudado liquidado" valor={money(tot('totalrecaudado'))} />
+        <Kpi label="Ingresos liquidados" valor={money(tot('totalrecaudado'))} />
         <Kpi label="Descuentos (ingreso y fondos)" valor={money(tot('totaldescuentos'))} tono="#15803d" />
+        <Kpi label="Cargos al socio" valor={money(tot('totalcargos'))} />
         <Kpi label="Neto liquidado" valor={money(tot('neto'))} />
         <Kpi label="Pendiente por pagar" valor={money(tot('neto', 'LIQUIDADA'))} tono="#b45309" />
       </div>
       <Card>
-        <CardHeader icon="request_quote" title="Liquidaciones a propietarios">
+        <CardHeader icon="request_quote" title="Extractos por bus (liquidaciones a propietarios)">
           <FiltroFechas desde={desde} hasta={hasta} onDesde={setDesde} onHasta={setHasta} />
           <Btn variant="secondary" icon="download" onClick={() => exportarExcel(`liquidaciones-${desde}-${hasta}`, [{ nombre: 'Liquidaciones', filas: filas.map((l) => ({
-            N: l.idliquidacion, Movil: l.numeromovil, Placa: l.placa, Propietario: l.propietario, Desde: l.desde, Hasta: l.hasta, Viajes: l.viajes,
-            Recaudado: Number(l.totalrecaudado), Descuentos: Number(l.totaldescuentos), Neto: Number(l.neto), Estado: l.estado, Comprobante: l.comprobante, Pago: l.comprobantepago ?? '' })) }])}>Excel</Btn>
+            N: l.idliquidacion, Movil: l.numeromovil, Placa: l.placa, Propietario: l.propietario, Desde: l.desde, Hasta: l.hasta, Viajes: l.viajes, Pasajeros: l.pasajeros,
+            'VH01 Pasajes': Number(l.totalpasajes), 'VH09 Encomiendas': Number(l.totalencomiendas), 'VH10 Expresos': Number(l.totalexpresos),
+            Ingresos: Number(l.totalrecaudado), Descuentos: Number(l.totaldescuentos), Cargos: Number(l.totalcargos), 'Saldo anterior': Number(l.saldoanterior),
+            Interes: Number(l.interesmora), Neto: Number(l.neto), Estado: l.estado, Comprobante: l.comprobante, Pago: l.comprobantepago ?? '' })) }])}>Excel</Btn>
           <Btn icon="add" onClick={() => setNueva({ idvehiculo: '', desde: inicioMes(), hasta: hoyCO(), otros: [], observacion: '' })}>Nueva liquidación</Btn>
         </CardHeader>
         <Tabla cargando={lista.isLoading} filas={filas} clave={(l: any) => l.idliquidacion} vacio="Sin liquidaciones en el período" columnas={[
@@ -171,8 +199,9 @@ function Liquidaciones() {
           { label: 'Móvil', render: (l: any) => <>{l.numeromovil} · {l.placa}</> },
           { label: 'Propietario', render: (l: any) => l.propietario },
           { label: 'Período', render: (l: any) => `${String(l.desde).slice(0, 10)} a ${String(l.hasta).slice(0, 10)}` },
-          { label: 'Recaudado', align: 'right', render: (l: any) => money(l.totalrecaudado) },
+          { label: 'Ingresos', align: 'right', render: (l: any) => money(l.totalrecaudado) },
           { label: 'Descuentos', align: 'right', render: (l: any) => money(l.totaldescuentos) },
+          { label: 'Cargos y saldo', align: 'right', render: (l: any) => money(Number(l.totalcargos ?? 0) + Number(l.saldoanterior ?? 0) + Number(l.interesmora ?? 0)) },
           { label: 'Neto', align: 'right', render: (l: any) => <Valor v={l.neto} fuerte /> },
           { label: 'Estado', render: (l: any) => <Badge tone={l.estado === 'PAGADA' ? 'green' : l.estado === 'ANULADA' ? 'gray' : 'amber'}>{l.estado}</Badge> },
           { label: '', render: (l: any) => (
@@ -215,9 +244,9 @@ function NuevaLiquidacion({ inicial, onClose, onOk }: { inicial: any; onClose: (
         <Field label="Desde (viajes)"><input type="date" value={f.desde} onChange={(e) => setF({ ...f, desde: e.target.value })} style={inputStyle} /></Field>
         <Field label="Corte (hasta)" required><input type="date" value={f.hasta} onChange={(e) => setF({ ...f, hasta: e.target.value })} style={inputStyle} /></Field>
       </Grid>
-      <p style={{ fontSize: 12, color: '#64748b', margin: '8px 0 0' }}>Se liquidan todos los pasajes recaudados hasta la fecha de corte que aún no estén en otra liquidación. «Desde» solo define los viajes que se cuentan para el rodamiento.</p>
+      <p style={{ fontSize: 12, color: '#64748b', margin: '8px 0 0' }}>Se liquida todo lo pendiente hasta la fecha de corte: pasajes, encomiendas despachadas, expresos, traslados y las cuotas de cargos ya vencidas. «Desde» solo define los viajes que se cuentan para el rodamiento.</p>
 
-      <h4 style={{ margin: '16px 0 6px', fontSize: 13 }}>Otros descuentos (anticipos, multas, cuotas)</h4>
+      <h4 style={{ margin: '16px 0 6px', fontSize: 13 }}>Otros descuentos puntuales (multas…) · combustible, anticipos, repuestos y nómina van en «Cargos al socio»</h4>
       {f.otros.map((o: any, i: number) => (
         <div key={i} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 2fr auto', gap: 8, marginBottom: 6 }}>
           <input placeholder="Descripción" value={o.nombre} onChange={(e) => { const x = [...f.otros]; x[i] = { ...o, nombre: e.target.value }; setF({ ...f, otros: x }); }} style={inputStyle} />
@@ -234,13 +263,20 @@ function NuevaLiquidacion({ inicial, onClose, onOk }: { inicial: any; onClose: (
           {prev.error && <Alerta msg={{ tipo: 'err', texto: (prev.error as any)?.response?.data?.message ?? 'No se pudo calcular' }} />}
           {p && (
             <>
-              <div style={{ fontSize: 13, marginBottom: 8 }}>Recaudos pendientes: <b>{p.movimientos}</b> movimientos · Viajes en el período: <b>{p.viajes}</b></div>
-              <Tabla filas={[{ nombre: 'Pasajes recaudados', valor: p.recaudo, positivo: true }, ...p.detalle]} clave={(x: any) => x.nombre} columnas={[
-                { label: 'Concepto', render: (x: any) => (x.positivo ? <b>{x.nombre}</b> : `(−) ${x.nombre}${x.tipo === 'PORCENTAJE' ? ` ${Number(x.tasa)} %` : x.tipo === 'VALOR_VIAJE' ? ` × ${x.base} viajes` : ''}`) },
+              <div style={{ fontSize: 13, marginBottom: 8 }}>Recaudos pendientes: <b>{p.movimientos}</b> movimientos · Encomiendas: <b>{p.encomiendas?.length ?? 0}</b> · Pasajeros: <b>{p.pasajeros}</b> · Viajes: <b>{p.viajes}</b></div>
+              <Tabla filas={[
+                ...p.ingresos.filter((x: any) => x.valor).map((x: any) => ({ k: x.codigo, nombre: `${x.codigo} ${x.nombre}${x.pasajeros ? ` · ${x.pasajeros} pasajeros` : ''}`, valor: x.valor, positivo: true })),
+                ...p.detalle.map((x: any, i: number) => ({ k: `d${i}`, nombre: `(−) ${etiquetaDesc(x)}`, valor: -x.valor })),
+                ...p.cargos.map((x: any) => ({ k: `c${x.idcuota}`, nombre: `(−) ${x.nombre}`, valor: -x.valor })),
+                ...(p.saldoAnterior ? [{ k: 's', nombre: p.saldoAnterior > 0 ? '(−) Saldo en rojo anterior' : '(+) Saldo a favor anterior', valor: -p.saldoAnterior }] : []),
+                ...(p.interes ? [{ k: 'i', nombre: `(−) Interés de mora ${p.tasaMora} %`, valor: -p.interes }] : []),
+              ]} clave={(x: any) => x.k} columnas={[
+                { label: 'Concepto', render: (x: any) => (x.positivo ? <b>{x.nombre}</b> : x.nombre) },
                 { label: 'Valor', align: 'right', render: (x: any) => <Valor v={x.valor} fuerte={x.positivo} /> },
               ]} />
-              <div style={{ display: 'flex', justifyContent: 'flex-end', fontSize: 15, marginTop: 8 }}>Neto a pagar: <b style={{ marginLeft: 8 }}><Valor v={p.neto} fuerte /></b></div>
-              {p.neto < 0 && <p style={{ fontSize: 12, color: '#b45309' }}>Los descuentos superan el recaudo: la diferencia queda como saldo a cargo del propietario.</p>}
+              {!!p.agencias?.length && <p style={{ fontSize: 12, color: '#64748b' }}>Pasajes por agencia: {p.agencias.map((a: any) => `${a.agencia} ${money(a.valor)} (${a.pasajeros})`).join(' · ')}</p>}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', fontSize: 15, marginTop: 8 }}>{p.neto >= 0 ? 'Neto a pagar' : 'Saldo en rojo'}: <b style={{ marginLeft: 8 }}><Valor v={p.neto} fuerte /></b></div>
+              {p.neto < 0 && <p style={{ fontSize: 12, color: '#b45309' }}>Los descuentos y cargos superan los ingresos: el saldo en rojo pasa al siguiente extracto{p.tasaMora ? ` con interés del ${p.tasaMora} %` : ''}.</p>}
             </>
           )}
         </div>
@@ -248,7 +284,7 @@ function NuevaLiquidacion({ inicial, onClose, onOk }: { inicial: any; onClose: (
       <Field label="Observación" style={{ marginTop: 12 }}><input value={f.observacion} onChange={(e) => setF({ ...f, observacion: e.target.value })} style={inputStyle} /></Field>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
         <Btn variant="secondary" onClick={onClose}>Cancelar</Btn>
-        <Btn icon="check" disabled={!p || !p.movimientos || guardar.isPending} onClick={() => guardar.mutate()}>Liquidar y contabilizar</Btn>
+        <Btn icon="check" disabled={!p || (!p.movimientos && !p.encomiendas?.length && !p.cargos?.length && !p.saldoAnterior) || guardar.isPending} onClick={() => guardar.mutate()}>Liquidar y contabilizar</Btn>
       </div>
     </Modal>
   );
@@ -322,6 +358,7 @@ function Vehiculos() {
           { label: 'Propietario', render: (v: any) => <>{v.propietario}<div style={{ fontSize: 11.5, color: '#64748b' }}>{v.documentopropietario}</div></> },
           { label: 'Tipo', render: (v: any) => <><Badge tone={v.espropio ? 'blue' : 'green'}>{v.espropio ? 'Propio' : 'De socio'}</Badge>{!v.clasificado && <span style={{ fontSize: 11, color: '#94a3b8' }}> (automático)</span>}</> },
           { label: 'Recaudo sin liquidar', align: 'right', render: (v: any) => (v.espropio ? '—' : money(v.pendiente)) },
+          { label: 'Cargos por descontar', align: 'right', render: (v: any) => (v.espropio ? '—' : money(v.cargospendientes)) },
           { label: 'Última liquidación', render: (v: any) => (v.ultimaliquidacion ? String(v.ultimaliquidacion).slice(0, 10) : '—') },
           { label: '', render: (v: any) => (
             <Btn small variant="secondary" icon="swap_horiz" disabled={clasificar.isPending}
@@ -347,12 +384,12 @@ function Conceptos() {
       <Alerta msg={m.msg} onClose={m.cerrar} />
       <Card>
         <CardHeader icon="tune" title="Descuentos que se aplican en cada liquidación">
-          <Btn icon="add" onClick={() => setForm({ codigo: '', nombre: '', tipo: 'PORCENTAJE', valor: 0, idcuenta: null, orden: 10, activo: true })}>Nuevo descuento</Btn>
+          <Btn icon="add" onClick={() => setForm({ codigo: '', nombre: '', tipo: 'PORCENTAJE', valor: 0, idcuenta: null, orden: 10, activo: true, bases: ['PASAJES'], sobreneto: true })}>Nuevo descuento</Btn>
         </CardHeader>
-        <p style={{ padding: '0 20px', fontSize: 12.5, color: '#b45309' }}>Configure los valores que aprobó la cooperativa (por ejemplo, la cuota de administración). Los conceptos en 0 o inactivos no se descuentan.</p>
+        <p style={{ padding: '0 20px', fontSize: 12.5, color: '#64748b' }}>Orden de cálculo: primero los valores por pasajero (seguro $250 RC contractual + $250 RC extracontractual) y luego los porcentajes sobre sus fuentes, netos del seguro si así se marca. Los conceptos en 0 o inactivos no se descuentan.</p>
         <Tabla cargando={q.isLoading} filas={q.data ?? []} clave={(c: any) => c.idconcepto} vacio="Sin conceptos" columnas={[
           { label: 'Concepto', render: (c: any) => <><b>{c.nombre}</b><div style={{ fontSize: 11.5, color: '#64748b' }}>{c.codigo}</div></> },
-          { label: 'Cálculo', render: (c: any) => TIPOS[c.tipo] },
+          { label: 'Cálculo', render: (c: any) => <>{TIPOS[c.tipo]}<div style={{ fontSize: 11.5, color: '#64748b' }}>{(c.bases ?? ['PASAJES']).map((b: string) => FUENTES[b]).join(' + ')}{c.tipo === 'PORCENTAJE' && c.sobreneto !== false ? ' · neto de seguro' : ''}</div></> },
           { label: 'Valor', align: 'right', render: (c: any) => (c.tipo === 'PORCENTAJE' ? `${Number(c.valor)} %` : money(c.valor)) },
           { label: 'Cuenta', render: (c: any) => `${c.codigocuenta} ${c.nombrecuenta}` },
           { label: 'Estado', render: (c: any) => <Badge tone={c.activo ? 'green' : 'gray'}>{c.activo ? 'Activo' : 'Inactivo'}</Badge> },
@@ -374,16 +411,31 @@ function Conceptos() {
             </Field>
             <Field label="Orden"><input type="number" value={form.orden} onChange={(e) => setForm({ ...form, orden: e.target.value })} style={inputStyle} /></Field>
           </Grid>
+          {(form.tipo === 'PORCENTAJE' || form.tipo === 'VALOR_PASAJERO') && (
+            <Field label={form.tipo === 'VALOR_PASAJERO' ? 'Pasajeros de' : 'Se calcula sobre'} required style={{ marginTop: 12 }}>
+              <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', fontSize: 13 }}>
+                {Object.entries(FUENTES).map(([k, v]) => (
+                  <label key={k} style={{ display: 'flex', gap: 6 }}>
+                    <input type="checkbox" checked={(form.bases ?? []).includes(k)} onChange={(e) => setForm({ ...form, bases: e.target.checked ? [...(form.bases ?? []), k] : (form.bases ?? []).filter((b: string) => b !== k) })} /> {v}
+                  </label>
+                ))}
+              </div>
+            </Field>
+          )}
+          {form.tipo === 'PORCENTAJE' && (
+            <label style={{ display: 'flex', gap: 6, marginTop: 10, fontSize: 13 }}><input type="checkbox" checked={form.sobreneto !== false} onChange={(e) => setForm({ ...form, sobreneto: e.target.checked })} /> Sobre el valor neto del seguro de pasajeros</label>
+          )}
           <Field label="Cuenta contable (ingreso de la cooperativa, fondo o retención)" required style={{ marginTop: 12 }}>
             <CuentaSelect value={form.idcuenta} onChange={(c) => setForm({ ...form, idcuenta: c?.idcuenta ?? null })} />
           </Field>
           <label style={{ display: 'flex', gap: 6, marginTop: 12, fontSize: 13 }}><input type="checkbox" checked={form.activo} onChange={(e) => setForm({ ...form, activo: e.target.checked })} /> Activo</label>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
             <Btn variant="secondary" onClick={() => setForm(null)}>Cancelar</Btn>
-            <Btn icon="save" disabled={!form.codigo || !form.nombre || !form.idcuenta || guardar.isPending} onClick={() => guardar.mutate()}>Guardar</Btn>
+            <Btn icon="save" disabled={!form.codigo || !form.nombre || !form.idcuenta || ((form.tipo === 'PORCENTAJE' || form.tipo === 'VALOR_PASAJERO') && !(form.bases ?? []).length) || guardar.isPending} onClick={() => guardar.mutate()}>Guardar</Btn>
           </div>
         </Modal>
       )}
+      <ConceptosCargo />
     </>
   );
 }

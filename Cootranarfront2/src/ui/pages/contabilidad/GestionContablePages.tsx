@@ -8,6 +8,7 @@ import {
   exportarExcel, hoyCO, inputStyle, money, pedirMotivo, useMensaje,
 } from './contUi';
 import { NominaElectronicaPanel } from './NominaElectronica';
+import { DiferidosPanel } from './ComplementosContables';
 
 // ════════════════════════════════════════════════════════════════════════════
 // ACTIVOS FIJOS
@@ -90,6 +91,7 @@ export const ActivosPage = () => {
           </div>
         </Modal>
       )}
+      <DiferidosPanel />
     </Layout>
   );
 };
